@@ -125,6 +125,7 @@ const server = app.listen(PORT, () => {
   console.log(`\n🌿 Grevya HR Portal`);
   console.log(`   URL  : http://localhost:${PORT}`);
   console.log(`   DB   : ${process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite (WAL)'}`);
+  console.log(`   Supabase: ${process.env.SUPABASE_DB_URL ? 'Configured' : 'Disabled'}`);
   console.log(`   Email: ${process.env.SMTP_HOST ? 'Enabled' : 'Disabled'}`);
   console.log(`   AI   : ${process.env.ANTHROPIC_API_KEY ? 'Claude enabled' : 'Smart fallback'}\n`);
 });

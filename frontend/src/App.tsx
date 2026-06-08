@@ -5,6 +5,7 @@ import Sidebar from './components/layout/Sidebar';
 import Topbar from './components/layout/Topbar';
 import AIChat from './components/ai/AIChat';
 import { ToastContainer } from './components/ui/Toast';
+import type { UserRole } from './types';
 
 // ── Lazy-loaded pages (code-split for performance) ────────────────────────────
 const LandingPage = lazy(() => import('./pages/LandingPage'));
@@ -34,6 +35,39 @@ const ShiftsPage = lazy(() => import('./pages/ShiftsPage'));
 const AuditLogPage = lazy(() => import('./pages/AuditLogPage'));
 const AccessRequestsPage = lazy(() => import('./pages/AccessRequestsPage'));
 const AccessReviewPage = lazy(() => import('./pages/AccessReviewPage'));
+
+const ALL_ROLES: UserRole[] = ['super_admin', 'admin', 'hr_manager', 'manager', 'employee'];
+const HR_ROLES: UserRole[] = ['super_admin', 'admin', 'hr_manager'];
+const ADMIN_HR_MANAGER_ROLES: UserRole[] = ['super_admin', 'admin', 'hr_manager', 'manager'];
+const PAGE_ROLES: Record<string, UserRole[]> = {
+  dashboard: ALL_ROLES,
+  employees: ADMIN_HR_MANAGER_ROLES,
+  orgchart: ALL_ROLES,
+  recruitment: ADMIN_HR_MANAGER_ROLES,
+  onboarding: ADMIN_HR_MANAGER_ROLES,
+  leave: ALL_ROLES,
+  attendance: ALL_ROLES,
+  performance: ALL_ROLES,
+  expenses: ALL_ROLES,
+  calendar: ALL_ROLES,
+  reports: ADMIN_HR_MANAGER_ROLES,
+  payslips: ['super_admin', 'admin', 'hr_manager', 'employee'],
+  documents: ALL_ROLES,
+  shifts: ALL_ROLES,
+  leaderboard: ALL_ROLES,
+  ai: ADMIN_HR_MANAGER_ROLES,
+  access: HR_ROLES,
+  audit: HR_ROLES,
+  compliance: HR_ROLES,
+  budget: HR_ROLES,
+  notifications: ALL_ROLES,
+  profile: ALL_ROLES,
+};
+
+function canOpenPage(role: UserRole | undefined, page: string) {
+  if (!role) return false;
+  return (PAGE_ROLES[page] || HR_ROLES).includes(role);
+}
 
 // ── Suspense loading fallback ─────────────────────────────────────────────────
 function PageLoader() {
@@ -92,8 +126,10 @@ export default function App() {
   const [page, setPage] = useState(() => localStorage.getItem('currentPage') || 'dashboard');
   const [appView, setAppView] = useState<'landing' | 'login' | 'app'>('landing');
   const isAccessReview = window.location.pathname === '/access-review';
+  const isPasswordReset = window.location.pathname === '/reset-password' || window.location.pathname === '/auth/reset-password';
 
   const navigate = (nextPage: string) => {
+    if (!canOpenPage(currentUser?.role, nextPage)) nextPage = 'dashboard';
     setPage(nextPage);
     localStorage.setItem('currentPage', nextPage);
     if (window.innerWidth <= 900) setSidebarOpen(false);
@@ -127,11 +163,29 @@ export default function App() {
     if (!currentUser && appView === 'app') setAppView('landing');
   }, [currentUser, authStatus, appView]);
 
+  useEffect(() => {
+    if (currentUser && !canOpenPage(currentUser.role, page)) {
+      setPage('dashboard');
+      localStorage.setItem('currentPage', 'dashboard');
+    }
+  }, [currentUser, page]);
+
   if (isAccessReview) {
     return (
       <ErrorBoundary>
         <Suspense fallback={<PageLoader />}>
           <AccessReviewPage />
+        </Suspense>
+        <ToastContainer />
+      </ErrorBoundary>
+    );
+  }
+
+  if (isPasswordReset) {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
+          <LoginPage onBack={() => { window.history.replaceState({}, '', '/'); setAppView('landing'); }} />
         </Suspense>
         <ToastContainer />
       </ErrorBoundary>

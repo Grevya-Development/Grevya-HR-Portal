@@ -4,7 +4,7 @@ import { UserRole } from '../../types';
 import {
   LayoutDashboard, Users, Calendar, Clock, BarChart3,
   LogOut, ChevronLeft, ChevronRight, Bell, User, Trophy, Zap,
-  FileText, Home, Briefcase, GitBranch, FolderOpen, Shield, Sun, UserCheck
+  FileText, Briefcase, GitBranch, FolderOpen, Shield, Sun, UserCheck
 , TrendingUp } from 'lucide-react';
 
 interface NavItem {
@@ -60,6 +60,7 @@ const NAV_SECTIONS = [
 ];
 
 const NAV_ITEMS: NavItem[] = NAV_SECTIONS.flatMap(s => s.items);
+const GREVYA_LOGO_SRC = '/brand/grevya-logo.png';
 
 interface SidebarProps {
   currentPage: string;
@@ -117,31 +118,27 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
       >
-        <div style={{
-          width: 38,
-          height: 38,
-          borderRadius: 12,
-          background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-          color: 'white',
-          fontWeight: 700,
-          fontSize: '1rem',
-          boxShadow: '0 4px 12px rgba(34,197,94,0.3)',
-          border: '1px solid rgba(255,255,255,0.15)',
-        }}>
-          {currentUser.avatar}
-        </div>
+        <img
+          src={GREVYA_LOGO_SRC}
+          alt="Grevya logo"
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 12,
+            objectFit: 'contain',
+            flexShrink: 0,
+            boxShadow: '0 4px 12px rgba(34,197,94,0.22)',
+            border: '1px solid rgba(255,255,255,0.14)',
+          }}
+        />
         
         {sidebarOpen && (
           <div style={{ overflow: 'hidden', flex: 1 }}>
-            <div style={{ color: 'white', fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-              {currentUser.name}
+            <div style={{ color: 'white', fontWeight: 700, fontSize: '0.94rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+              Grevya HR
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Grevya</span>
+              <span style={{ color: 'rgba(255,255,255,0.42)', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 88 }}>{currentUser.name}</span>
               <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'rgba(255,255,255,0.2)' }} />
               <span style={{ color: '#4ade80', fontSize: '0.7rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
                 {roleLabel}

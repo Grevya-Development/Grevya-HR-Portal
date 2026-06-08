@@ -7,6 +7,8 @@ const { authenticateToken, requireAdminOrHR, verifySupabaseToken, looksLikeSupab
 const { sendEmailNotification, templates } = require('../config/email');
 
 const ADMIN_EMAIL = 'harikanth.grevya@gmail.com';
+const PRIMARY_FOUNDER_NAME = 'Kavin N R';
+const PRIMARY_FOUNDER_AVATAR = 'KN';
 const VALID_ROLES = ['super_admin', 'admin', 'hr_manager', 'manager', 'employee'];
 const SUPABASE_URL = process.env.SUPABASE_URL ? process.env.SUPABASE_URL.replace(/\/$/, '') : '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -429,19 +431,21 @@ async function ensureDepartment(nameOrId) {
 async function ensurePrimaryAdminProfile(claims) {
   const email = normalizeEmail(claims.email);
   if (email !== ADMIN_EMAIL) return null;
-  const fullName = userNameFromClaims(claims) || 'Grevya Admin';
-  const avatar = fullName.split(' ').map((part) => part[0]).join('').toUpperCase().slice(0, 2) || 'GA';
+  const fullName = PRIMARY_FOUNDER_NAME;
+  const avatar = PRIMARY_FOUNDER_AVATAR;
   const departmentId = await ensureDepartment('Administration');
   const existingByEmail = await supabaseDb.queryOne(
     `update public.profiles
      set role = 'super_admin'::public.app_role,
          status = 'active'::public.profile_status,
+         full_name = $3,
+         avatar = $4,
          department_id = coalesce(department_id, $2),
-         job_title = coalesce(job_title, 'System Administrator'),
+         job_title = 'Founder',
          updated_at = now()
      where lower(email) = lower($1)
      returning id, email, full_name, avatar, role, status, department_id, job_title, manager_id`,
-    [email, departmentId],
+    [email, departmentId, fullName, avatar],
   );
   if (existingByEmail) return existingByEmail;
 
@@ -451,7 +455,7 @@ async function ensurePrimaryAdminProfile(claims) {
        employment_type, hire_date, performance_score, attendance_score, points, streak
      )
      values (
-       $1, $2, $3, $4, 'super_admin'::public.app_role, 'active'::public.profile_status, $5, 'System Administrator',
+       $1, $2, $3, $4, 'super_admin'::public.app_role, 'active'::public.profile_status, $5, 'Founder',
        'full_time'::public.employment_type, current_date, 100, 100, 0, 0
      )
      on conflict (id) do update set
@@ -461,7 +465,7 @@ async function ensurePrimaryAdminProfile(claims) {
        role = 'super_admin'::public.app_role,
        status = 'active'::public.profile_status,
        department_id = coalesce(public.profiles.department_id, excluded.department_id),
-       job_title = coalesce(public.profiles.job_title, excluded.job_title),
+       job_title = excluded.job_title,
        updated_at = now()
      returning id, email, full_name, avatar, role, status, department_id, job_title, manager_id`,
     [claims.sub, fullName, email, avatar, departmentId],

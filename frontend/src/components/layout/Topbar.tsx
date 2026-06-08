@@ -33,11 +33,13 @@ const PAGE_TITLES: Record<string, string> = {
 };
 
 const ROLE_LABELS: Record<string, string> = {
+  super_admin: 'Founder',
   admin: 'Administrator',
   hr_manager: 'HR Manager',
   manager: 'Manager',
   employee: 'Employee',
 };
+const GREVYA_LOGO_SRC = '/brand/grevya-logo.png';
 
 export default function Topbar({ currentPage, onNavigate }: TopbarProps) {
   const { currentUser, darkMode, toggleDarkMode, toggleSidebar, notifications } = useStore();
@@ -83,6 +85,11 @@ export default function Topbar({ currentPage, onNavigate }: TopbarProps) {
       <button className="btn btn-ghost btn-icon mobile-menu-button" onClick={toggleSidebar} style={{ display: 'none' }} aria-label="Open navigation">
         <Menu size={18} />
       </button>
+
+      <div className="topbar-mobile-brand" style={{ display: 'none', alignItems: 'center', gap: 8 }}>
+        <img src={GREVYA_LOGO_SRC} alt="Grevya logo" style={{ width: 30, height: 30, objectFit: 'contain', borderRadius: 8 }} />
+        <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.9rem' }}>Grevya HR</span>
+      </div>
 
       {/* Page title */}
       <div className="topbar-title" style={{ flex: 1, minWidth: 0 }}>
@@ -167,7 +174,7 @@ export default function Topbar({ currentPage, onNavigate }: TopbarProps) {
                 {currentUser?.name.split(' ')[0]}
               </span>
               <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                {currentUser?.role === 'super_admin' ? 'Founder' : currentUser?.role === 'admin' ? 'Administrator' : currentUser?.role === 'hr_manager' ? 'HR Manager' : currentUser?.role === 'manager' ? 'Manager' : 'Employee'}
+                {currentUser?.role ? ROLE_LABELS[currentUser.role] || currentUser.role : 'Employee'}
               </span>
             </div>
             <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />

@@ -9,13 +9,13 @@ import {
   ChevronRight,
   Clock,
   GitBranch,
-  Home,
   Play,
   Shield,
   Star,
   TrendingUp,
   Trophy,
   Users,
+  X,
   Zap,
 } from 'lucide-react';
 
@@ -89,15 +89,56 @@ const TESTIMONIALS = [
   { name: 'Sneha Rao', role: 'Content Lead, BrandSpace', avatar: 'SR', text: 'Best HR portal I have used. Clean UI, fast, and the payslip module is chef\'s kiss.' },
 ];
 
+const DEMO_VIDEO_PATH = '/videos/grevya-hr-demo.mp4';
+const GREVYA_LOGO_SRC = '/brand/grevya-logo.png';
+
 export default function LandingPage({ onGetStarted }: LandingPageProps) {
   const [scrolled, setScrolled] = useState(false);
+  const [demoOpen, setDemoOpen] = useState(false);
+  const [demoMissing, setDemoMissing] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  useEffect(() => {
+    if (!demoOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeDemo();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [demoOpen]);
+
+  useEffect(() => {
+    if (!demoOpen) return;
+    setDemoMissing(false);
+    const playTimer = window.setTimeout(() => {
+      videoRef.current?.play().catch(() => {
+        // Browsers may block autoplay; controls remain available.
+      });
+    }, 50);
+    return () => window.clearTimeout(playTimer);
+  }, [demoOpen]);
+
+  const openDemo = () => {
+    setDemoMissing(false);
+    setDemoOpen(true);
+  };
+
+  const closeDemo = () => {
+    const video = videoRef.current;
+    if (video) {
+      video.pause();
+      video.currentTime = 0;
+    }
+    setDemoOpen(false);
+    setDemoMissing(false);
+  };
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#070d0a', color: '#e2e8f0', minHeight: '100vh', overflowX: 'hidden' }}>
@@ -111,14 +152,11 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
         transition: 'all 300ms',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 34, height: 34, borderRadius: 10,
-            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 14px rgba(34,197,94,0.4)',
-          }}>
-            <Home size={16} color="white" />
-          </div>
+          <img
+            src={GREVYA_LOGO_SRC}
+            alt="Grevya logo"
+            style={{ width: 38, height: 38, objectFit: 'contain', borderRadius: 10, boxShadow: '0 4px 14px rgba(34,197,94,0.22)' }}
+          />
           <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'white' }}>Grevya</span>
           <span style={{ fontSize: '0.7rem', color: 'rgba(34,197,94,0.7)', fontWeight: 600 }}>HR</span>
         </div>
@@ -160,6 +198,19 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
       }}>
         <div style={{ position: 'absolute', top: '15%', left: '10%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(34,197,94,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: '10%', right: '5%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+        <img
+          src={GREVYA_LOGO_SRC}
+          alt="Grevya logo"
+          style={{
+            width: 'clamp(72px, 10vw, 112px)',
+            height: 'clamp(72px, 10vw, 112px)',
+            objectFit: 'contain',
+            borderRadius: 18,
+            marginBottom: 22,
+            boxShadow: '0 18px 44px rgba(0,0,0,0.35)',
+          }}
+        />
 
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -210,7 +261,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             Start Free Trial <ArrowRight size={18} />
           </button>
           <button
-            onClick={onGetStarted}
+            onClick={openDemo}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '14px 28px', borderRadius: 14,
@@ -476,9 +527,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
 
       <footer style={{ padding: '32px clamp(20px, 5vw, 48px)', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 24, height: 24, borderRadius: 7, background: 'linear-gradient(135deg, #22c55e, #16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Home size={12} color="white" />
-          </div>
+          <img src={GREVYA_LOGO_SRC} alt="Grevya logo" style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 7 }} />
           <span style={{ fontWeight: 700, color: 'white', fontSize: '0.875rem' }}>Grevya HR</span>
         </div>
         <div style={{ fontSize: '0.78rem', color: '#475569' }}>(c) 2026 Grevya. Built for HR teams everywhere.</div>
@@ -492,6 +541,110 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
           ))}
         </div>
       </footer>
+
+      {demoOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Grevya HR demo video"
+          onClick={closeDemo}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 300,
+            background: 'rgba(3,7,5,0.82)',
+            backdropFilter: 'blur(16px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 'clamp(16px, 4vw, 40px)',
+          }}
+        >
+          <div
+            onClick={event => event.stopPropagation()}
+            style={{
+              width: 'min(960px, 100%)',
+              maxHeight: 'min(82vh, 720px)',
+              borderRadius: 20,
+              border: '1px solid rgba(34,197,94,0.24)',
+              background: '#07100b',
+              boxShadow: '0 32px 90px rgba(0,0,0,0.65)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 16,
+              padding: '16px 18px',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+            }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <img src={GREVYA_LOGO_SRC} alt="Grevya logo" style={{ width: 30, height: 30, objectFit: 'contain', borderRadius: 7 }} />
+                  <div style={{ color: 'white', fontWeight: 800, fontSize: '0.98rem' }}>Grevya HR Demo</div>
+                </div>
+                <div style={{ color: '#64748b', fontSize: '0.76rem', marginTop: 3 }}>Local video playback</div>
+              </div>
+              <button
+                onClick={closeDemo}
+                aria-label="Close demo video"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: 'rgba(255,255,255,0.06)',
+                  color: '#e2e8f0',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: 'clamp(12px, 2.4vw, 20px)' }}>
+              {demoMissing ? (
+                <div style={{
+                  minHeight: 'min(52vh, 420px)',
+                  borderRadius: 14,
+                  border: '1px dashed rgba(34,197,94,0.32)',
+                  background: 'rgba(34,197,94,0.06)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                  color: '#94a3b8',
+                  padding: 24,
+                }}>
+                  Demo video coming soon.
+                </div>
+              ) : (
+                <video
+                  ref={videoRef}
+                  src={DEMO_VIDEO_PATH}
+                  controls
+                  autoPlay
+                  playsInline
+                  onError={() => setDemoMissing(true)}
+                  style={{
+                    width: '100%',
+                    maxHeight: 'calc(82vh - 112px)',
+                    borderRadius: 14,
+                    background: '#020403',
+                    display: 'block',
+                  }}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes pulse {

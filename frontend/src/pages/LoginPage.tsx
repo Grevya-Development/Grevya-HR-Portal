@@ -12,8 +12,26 @@ const DEMO_ACCOUNTS = [
 const SHOW_DEMO_ACCOUNTS = import.meta.env.DEV && import.meta.env.VITE_ALLOW_DEMO_AUTH === 'true';
 const ENABLE_GOOGLE_AUTH = import.meta.env.VITE_ENABLE_GOOGLE_OAUTH === 'true';
 const ENABLE_APPLE_AUTH = import.meta.env.VITE_ENABLE_APPLE_OAUTH === 'true';
+const GREVYA_LOGO_SRC = '/brand/grevya-logo.png';
 
 type View = 'login' | 'forgot' | 'reset-sent' | 'reset-password' | 'pending' | 'denied' | 'request-access';
+
+function BrandMark({ size = 56 }: { size?: number }) {
+  return (
+    <img
+      src={GREVYA_LOGO_SRC}
+      alt="Grevya logo"
+      style={{
+        width: size,
+        height: size,
+        objectFit: 'contain',
+        borderRadius: Math.max(10, Math.round(size * 0.22)),
+        boxShadow: '0 10px 24px rgba(0,0,0,0.16)',
+        flexShrink: 0,
+      }}
+    />
+  );
+}
 
 export default function LoginPage({ onBack }: { onBack?: () => void }) {
   const { login, logout, signInWithOAuth, requestAccess, initializeAuth, authStatus, authMessage } = useStore();
@@ -39,7 +57,8 @@ export default function LoginPage({ onBack }: { onBack?: () => void }) {
   useEffect(() => {
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     const query = new URLSearchParams(window.location.search);
-    if (hash.get('type') === 'recovery' || query.get('type') === 'recovery') setView('reset-password');
+    const resetPath = window.location.pathname === '/reset-password' || window.location.pathname === '/auth/reset-password';
+    if (resetPath || hash.get('type') === 'recovery' || query.get('type') === 'recovery') setView('reset-password');
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') setView('reset-password');
     });
@@ -127,7 +146,7 @@ export default function LoginPage({ onBack }: { onBack?: () => void }) {
     setLoading(true); setError('');
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
-        redirectTo: `${window.location.origin}/?type=recovery`,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) throw error;
       setView('reset-sent');
@@ -178,9 +197,7 @@ export default function LoginPage({ onBack }: { onBack?: () => void }) {
       {BG}
       <div style={{ position:'relative' }}>
         <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:48 }}>
-          <div style={{ width:44, height:44, borderRadius:12, background:'linear-gradient(135deg,#22c55e,#16a34a)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 8px 24px rgba(34,197,94,0.4)' }}>
-            <span style={{ color:'white', fontWeight:800, fontSize:'1.2rem' }}>G</span>
-          </div>
+          <BrandMark size={48} />
           <span style={{ color:'white', fontWeight:700, fontSize:'1.25rem', letterSpacing:'-0.02em' }}>Grevya</span>
         </div>
         <h1 style={{ color:'white', fontSize:'2rem', fontWeight:700, lineHeight:1.2, marginBottom:16 }}>Your people.<br /><span style={{ color:'#4ade80' }}>Powered by AI.</span></h1>
@@ -205,6 +222,7 @@ export default function LoginPage({ onBack }: { onBack?: () => void }) {
         <button onClick={() => setView('login')} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:'0.85rem', marginBottom:28, padding:0 }}>
           <ArrowLeft size={14} /> Back to login
         </button>
+        <BrandMark size={58} />
         <div style={{ width:52, height:52, borderRadius:14, background:'#f3e8ff', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:20 }}>
           <Lock size={24} color="#7c3aed" />
         </div>
@@ -229,6 +247,7 @@ export default function LoginPage({ onBack }: { onBack?: () => void }) {
     <div style={{ minHeight:'100vh', background:'linear-gradient(135deg,#0f1f14,#1a3a22)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
       {BG}
       <div style={{ background:'white', borderRadius:20, padding:'48px 40px', width:'100%', maxWidth:440, textAlign:'center', position:'relative', zIndex:1 }}>
+        <div style={{ display:'flex', justifyContent:'center', marginBottom:18 }}><BrandMark size={64} /></div>
         <div style={{ width:64, height:64, borderRadius:'50%', background:'#dcfce7', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px' }}>
           <CheckCircle2 size={32} color="#16a34a" />
         </div>
@@ -243,6 +262,7 @@ export default function LoginPage({ onBack }: { onBack?: () => void }) {
     <div style={{ minHeight:'100vh', background:'linear-gradient(135deg,#0f1f14,#1a3a22)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
       {BG}
       <div style={{ background:'white', borderRadius:20, padding:'48px 40px', width:'100%', maxWidth:440, position:'relative', zIndex:1 }}>
+        <BrandMark size={58} />
         <div style={{ width:52, height:52, borderRadius:14, background:'#dcfce7', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:20 }}>
           <Lock size={24} color="#16a34a" />
         </div>
@@ -270,6 +290,7 @@ export default function LoginPage({ onBack }: { onBack?: () => void }) {
     <div style={{ minHeight:'100vh', background:'linear-gradient(135deg,#0f1f14,#1a3a22)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
       {BG}
       <div style={{ background:'white', borderRadius:20, padding:'48px 40px', width:'100%', maxWidth:460, textAlign:'center', position:'relative', zIndex:1 }}>
+        <div style={{ display:'flex', justifyContent:'center', marginBottom:18 }}><BrandMark size={64} /></div>
         <div style={{ width:64, height:64, borderRadius:'50%', background:'#fef3c7', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px' }}>
           <AlertCircle size={30} color="#b45309" />
         </div>
@@ -290,6 +311,7 @@ export default function LoginPage({ onBack }: { onBack?: () => void }) {
     <div style={{ minHeight:'100vh', background:'linear-gradient(135deg,#0f1f14,#1a3a22)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
       {BG}
       <div style={{ background:'white', borderRadius:20, padding:'48px 40px', width:'100%', maxWidth:460, textAlign:'center', position:'relative', zIndex:1 }}>
+        <div style={{ display:'flex', justifyContent:'center', marginBottom:18 }}><BrandMark size={64} /></div>
         <div style={{ width:64, height:64, borderRadius:'50%', background:'#fee2e2', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px' }}>
           <AlertCircle size={30} color="#dc2626" />
         </div>
@@ -307,6 +329,7 @@ export default function LoginPage({ onBack }: { onBack?: () => void }) {
         <button onClick={() => { setView('login'); setError(''); }} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:'0.85rem', marginBottom:24, padding:0 }}>
           <ArrowLeft size={14} /> Back to login
         </button>
+        <BrandMark size={58} />
         <div style={{ width:52, height:52, borderRadius:14, background:'#dcfce7', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:20 }}>
           <UserPlus size={24} color="#16a34a" />
         </div>
@@ -351,6 +374,7 @@ export default function LoginPage({ onBack }: { onBack?: () => void }) {
         {leftPanel}
         <div style={{ background:'#ffffff', padding:'56px 48px', overflowY:'auto' }}>
           <div style={{ marginBottom:32 }}>
+            <BrandMark size={60} />
             <h2 style={{ fontSize:'1.5rem', fontWeight:700, color:'#0f172a', marginBottom:6 }}>Sign in</h2>
             <p style={{ color:'#64748b', fontSize:'0.875rem' }}>Access your HR portal dashboard</p>
           </div>
@@ -363,7 +387,15 @@ export default function LoginPage({ onBack }: { onBack?: () => void }) {
             <div>
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
                 <label style={{ fontSize:'0.8rem', fontWeight:600, color:'#374151' }}>Password</label>
-                <button type="button" onClick={()=>setView('forgot')} style={{ background:'none', border:'none', color:'#7c3aed', fontSize:'0.75rem', cursor:'pointer', fontWeight:600, padding:0 }}>Forgot password?</button>
+                <button
+                  type="button"
+                  onClick={()=>setView('forgot')}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = '#16a34a'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = '#0f172a'; }}
+                  style={{ background:'none', border:'none', color:'#0f172a', fontSize:'0.75rem', cursor:'pointer', fontWeight:600, padding:0 }}
+                >
+                  Forgot password?
+                </button>
               </div>
               <div style={{ position:'relative' }}>
                 <input className="input" type={showPw?'text':'password'} value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" required style={{ paddingRight:44 }}/>
