@@ -1,4 +1,4 @@
-export type UserRole = 'hr_manager' | 'manager' | 'employee';
+export type UserRole = 'admin' | 'hr_manager' | 'manager' | 'employee';
 
 export interface User {
   id: string;
@@ -30,6 +30,18 @@ export interface Employee {
   points: number;
   badges: string[];
   streak: number;
+}
+
+export interface HRManager {
+  id: string;
+  name: string;
+  email: string;
+  department: string;
+  status: 'active' | 'inactive';
+  avatar: string;
+  joinDate: string;
+  phone: string;
+  location: string;
 }
 
 export interface LeaveRequest {

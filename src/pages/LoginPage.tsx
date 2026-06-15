@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useStore } from '../services/store';
 import { Eye, EyeOff, AlertCircle, ArrowRight, ArrowLeft, Home } from 'lucide-react';
+import brandLogo from '../brandimage/icon-192.png';
 
 const DEMO_ACCOUNTS = [
+  { role: 'Admin', email: 'admin@grevya.com', password: 'admin123', color: '#0f766e', bg: '#ecfdf5' },
   { role: 'HR Manager', email: 'hr@grevya.com', password: 'hr123', color: '#22c55e', bg: '#f0fdf4' },
   { role: 'Manager', email: 'manager@grevya.com', password: 'mgr123', color: '#3b82f6', bg: '#eff6ff' },
   { role: 'Employee', email: 'employee@grevya.com', password: 'emp123', color: '#8b5cf6', bg: '#f5f3ff' },
@@ -30,10 +32,14 @@ export default function LoginPage({ onBack }: LoginPageProps) {
     setLoading(false);
   };
 
-  const fillDemo = (acc: typeof DEMO_ACCOUNTS[0]) => {
+  const quickLogin = async (acc: typeof DEMO_ACCOUNTS[0]) => {
     setEmail(acc.email);
     setPassword(acc.password);
     setError('');
+    setLoading(true);
+    const ok = await login(acc.email, acc.password);
+    if (!ok) setError('Demo login failed. Please try again.');
+    setLoading(false);
   };
 
   return (
@@ -95,13 +101,14 @@ export default function LoginPage({ onBack }: LoginPageProps) {
                 width: 44,
                 height: 44,
                 borderRadius: 12,
-                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                background: 'rgba(255,255,255,0.95)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: '0 8px 24px rgba(34,197,94,0.4)',
+                overflow: 'hidden',
               }}>
-                <span style={{ color: 'white', fontWeight: 800, fontSize: '1.2rem' }}>G</span>
+                <img src={brandLogo} alt="Grevya logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
               <span style={{ color: 'white', fontWeight: 700, fontSize: '1.25rem', letterSpacing: '-0.02em' }}>Grevya</span>
             </div>
@@ -207,7 +214,7 @@ export default function LoginPage({ onBack }: LoginPageProps) {
               {DEMO_ACCOUNTS.map(acc => (
                 <button
                   key={acc.role}
-                  onClick={() => fillDemo(acc)}
+                  onClick={() => quickLogin(acc)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',

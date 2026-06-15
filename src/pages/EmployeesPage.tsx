@@ -29,7 +29,7 @@ interface CredInfo {
 
 export default function EmployeesPage() {
   const { currentUser, employees, addEmployee, updateEmployee, deleteEmployee } = useStore();
-  const isHR = currentUser?.role === 'hr_manager';
+  const isHR = currentUser?.role === 'hr_manager' || currentUser?.role === 'admin';
 
   const [search, setSearch] = useState('');
   const [dept, setDept] = useState('All');

@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Users, BarChart3, Calendar, Clock, Zap, Trophy, ArrowRight,
-  Shield, TrendingUp, CheckCircle2, Star, ChevronRight, Home,
+  Shield, TrendingUp, CheckCircle2, Star, ChevronRight,
   Bell, GitBranch, Briefcase, Play
 } from 'lucide-react';
+import brandLogo from '../brandimage/icon-192.png';
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -82,11 +83,12 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 34, height: 34, borderRadius: 10,
-            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+            background: 'rgba(255,255,255,0.96)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 4px 14px rgba(34,197,94,0.4)',
+            overflow: 'hidden',
           }}>
-            <Home size={16} color="white" />
+            <img src={brandLogo} alt="Grevya logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'white', letterSpacing: '-0.02em' }}>Grevya</span>
           <span style={{ fontSize: '0.7rem', color: 'rgba(34,197,94,0.7)', fontWeight: 600, marginLeft: 2 }}>HR</span>
@@ -372,7 +374,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
       <footer style={{ padding: '32px 48px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 24, height: 24, borderRadius: 7, background: 'linear-gradient(135deg, #22c55e, #16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Home size={12} color="white" />
+            <img src={brandLogo} alt="Grevya logo" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 7 }} />
           </div>
           <span style={{ fontWeight: 700, color: 'white', fontSize: '0.875rem' }}>Grevya HR</span>
         </div>

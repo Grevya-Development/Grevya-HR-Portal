@@ -1,10 +1,11 @@
 import React from 'react';
 import { useStore } from '../../services/store';
 import { UserRole } from '../../types';
+import brandLogo from '../../brandimage/icon-192.png';
 import {
   LayoutDashboard, Users, Calendar, Clock, BarChart3,
   LogOut, ChevronLeft, ChevronRight, Bell, User, Trophy, Zap,
-  FileText, Home, Briefcase, GitBranch
+  FileText, Briefcase, GitBranch, ShieldCheck
 } from 'lucide-react';
 
 interface NavItem {
@@ -16,6 +17,17 @@ interface NavItem {
 }
 
 const NAV_SECTIONS = [
+  {
+    label: 'Admin',
+    items: [
+      { label: 'Dashboard',       icon: <LayoutDashboard size={18} />, page: 'dashboard',    roles: ['admin'] as UserRole[] },
+      { label: 'HR Managers',     icon: <ShieldCheck size={18} />,     page: 'hr-managers',  roles: ['admin'] as UserRole[] },
+      { label: 'Employees',       icon: <Users size={18} />,           page: 'employees',    roles: ['admin'] as UserRole[] },
+      { label: 'Leave Requests',  icon: <Calendar size={18} />,        page: 'leave',        roles: ['admin'] as UserRole[] },
+      { label: 'Attendance',      icon: <Clock size={18} />,           page: 'attendance',   roles: ['admin'] as UserRole[] },
+      { label: 'Reports',         icon: <FileText size={18} />,        page: 'reports',      roles: ['admin'] as UserRole[] },
+    ],
+  },
   {
     label: 'Main',
     items: [
@@ -65,6 +77,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const filtered = NAV_ITEMS.filter(item => item.roles.includes(currentUser.role));
 
   const roleLabel = {
+    admin: 'Admin',
     hr_manager: 'HR Manager',
     manager: 'Manager',
     employee: 'Employee',
@@ -106,18 +119,16 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           width: 38,
           height: 38,
           borderRadius: 12,
-          background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+          background: 'rgba(255,255,255,0.96)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
-          color: 'white',
-          fontWeight: 700,
-          fontSize: '1rem',
           boxShadow: '0 4px 12px rgba(34,197,94,0.3)',
           border: '1px solid rgba(255,255,255,0.15)',
+          overflow: 'hidden',
         }}>
-          {currentUser.avatar}
+          <img src={brandLogo} alt="Grevya logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
         
         {sidebarOpen && (

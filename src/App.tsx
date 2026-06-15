@@ -5,9 +5,11 @@ import LoginPage from './pages/LoginPage';
 import Sidebar from './components/layout/Sidebar';
 import Topbar from './components/layout/Topbar';
 import HRDashboard from './pages/HRDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import ManagerDashboard from './pages/ManagerDashboard';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import EmployeesPage from './pages/EmployeesPage';
+import HRManagersPage from './pages/HRManagersPage';
 import LeavePage from './pages/LeavePage';
 import AttendancePage from './pages/AttendancePage';
 import PerformancePage from './pages/PerformancePage';
@@ -26,10 +28,12 @@ function PageContent({ page }: { page: string }) {
   const { currentUser } = useStore();
 
   if (page === 'dashboard') {
+    if (currentUser?.role === 'admin') return <AdminDashboard />;
     if (currentUser?.role === 'hr_manager') return <HRDashboard />;
     if (currentUser?.role === 'manager') return <ManagerDashboard />;
     return <EmployeeDashboard />;
   }
+  if (page === 'hr-managers') return <HRManagersPage />;
   if (page === 'employees') return <EmployeesPage />;
   if (page === 'leave') return <LeavePage />;
   if (page === 'attendance') return <AttendancePage />;
@@ -101,6 +105,7 @@ export default function App() {
 
 const PAGE_META: Record<string, { title: string; desc: string }> = {
   dashboard: { title: 'Dashboard', desc: 'Overview of your HR operations' },
+  'hr-managers': { title: 'HR Manager Management', desc: 'Admin controls HR managers, assignments and status' },
   employees: { title: 'Employee Management', desc: 'Manage your team and their details' },
   leave: { title: 'Leave Management', desc: 'Track and approve leave requests' },
   attendance: { title: 'Attendance', desc: 'Monitor team attendance and logs' },

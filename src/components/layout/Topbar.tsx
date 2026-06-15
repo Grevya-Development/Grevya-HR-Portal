@@ -10,6 +10,7 @@ interface TopbarProps {
 
 const PAGE_TITLES: Record<string, string> = {
   dashboard: 'Dashboard',
+  'hr-managers': 'HR Manager Management',
   employees: 'Employee Management',
   leave: 'Leave Management',
   attendance: 'Attendance',
@@ -142,7 +143,7 @@ export default function Topbar({ currentPage, onNavigate }: TopbarProps) {
                 {currentUser?.name.split(' ')[0]}
               </span>
               <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                {currentUser?.role === 'hr_manager' ? 'HR Manager' : currentUser?.role === 'manager' ? 'Manager' : 'Employee'}
+                {currentUser?.role === 'admin' ? 'Admin' : currentUser?.role === 'hr_manager' ? 'HR Manager' : currentUser?.role === 'manager' ? 'Manager' : 'Employee'}
               </span>
             </div>
             <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />

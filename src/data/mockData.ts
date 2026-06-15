@@ -1,4 +1,4 @@
-import { Employee, LeaveRequest, AttendanceRecord, Notification, AIInsight, PerformanceData, DepartmentStat, PaySlip, Badge } from '../types';
+import { Employee, LeaveRequest, AttendanceRecord, Notification, AIInsight, PerformanceData, DepartmentStat, PaySlip, Badge, HRManager } from '../types';
 
 export const BADGES: Badge[] = [
   { id: 'perfect_attendance', name: 'Perfect Attendance', icon: '🏆', description: '30 days no absence', color: '#22c55e' },
@@ -106,6 +106,14 @@ export const EMPLOYEES: Employee[] = [
     managerId: 'm2', phone: '+91 87654 09876', location: 'Pune',
     points: 2560, badges: ['top_performer', 'team_player', 'early_bird'], streak: 41,
   },
+];
+
+export const HR_MANAGERS: HRManager[] = [
+  { id: 'm1', name: 'Divya Kumar', email: 'hr@grevya.com', department: 'HR', status: 'active', avatar: 'DK', joinDate: '2021-03-22', phone: '+91 43210 98765', location: 'Pune' },
+  { id: 'm2', name: 'Ravi Nair', email: 'manager@grevya.com', department: 'Sales', status: 'active', avatar: 'RN', joinDate: '2020-11-20', phone: '+91 76543 21098', location: 'Delhi' },
+  { id: 'm3', name: 'Ishita Banerjee', email: 'ishita.banerjee@grevya.com', department: 'Marketing', status: 'active', avatar: 'IB', joinDate: '2022-04-08', phone: '+91 99887 44120', location: 'Kolkata' },
+  { id: 'm4', name: 'Mehul Saini', email: 'mehul.saini@grevya.com', department: 'Engineering', status: 'active', avatar: 'MS', joinDate: '2020-06-14', phone: '+91 88776 33019', location: 'Hyderabad' },
+  { id: 'm5', name: 'Naina Mehta', email: 'naina.mehta@grevya.com', department: 'Finance', status: 'inactive', avatar: 'NM', joinDate: '2023-01-16', phone: '+91 77665 22918', location: 'Mumbai' },
 ];
 
 export const LEAVE_REQUESTS: LeaveRequest[] = [
@@ -245,6 +253,7 @@ export const LEADERBOARD = EMPLOYEES
   .slice(0, 8);
 
 export const DEMO_USERS = [
+  { id: 'admin-1', name: 'Anika Rao', email: 'admin@grevya.com', password: 'admin123', role: 'admin' as const, department: 'Executive', position: 'System Admin', avatar: 'AR', joinDate: '2019-01-10', managerId: undefined },
   { id: 'u1', name: 'Divya Kumar', email: 'hr@grevya.com', password: 'hr123', role: 'hr_manager' as const, department: 'HR', position: 'HR Manager', avatar: 'DK', joinDate: '2021-03-22', managerId: undefined },
   { id: 'u2', name: 'Ravi Nair', email: 'manager@grevya.com', password: 'mgr123', role: 'manager' as const, department: 'Sales', position: 'Sales Manager', avatar: 'RN', joinDate: '2020-11-20', managerId: 'u1' },
   { id: 'u3', name: 'Kiran Patel', email: 'employee@grevya.com', password: 'emp123', role: 'employee' as const, department: 'Engineering', position: 'Backend Developer', avatar: 'KP', joinDate: '2022-03-15', managerId: 'u2' },
