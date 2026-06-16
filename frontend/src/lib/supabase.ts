@@ -5,7 +5,15 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 function hasRealEnvValue(value: string | undefined) {
-  return Boolean(value && value.trim() && !value.startsWith('replace-with-') && !value.includes('placeholder'));
+  const trimmed = value?.trim().toLowerCase();
+  return Boolean(
+    trimmed &&
+      !trimmed.startsWith('replace-with-') &&
+      !trimmed.startsWith('your-') &&
+      !trimmed.includes('placeholder') &&
+      !trimmed.includes('your-project-id') &&
+      !trimmed.includes('your-anon-key')
+  );
 }
 
 export const isSupabaseConfigured = hasRealEnvValue(supabaseUrl) && hasRealEnvValue(supabaseAnonKey);

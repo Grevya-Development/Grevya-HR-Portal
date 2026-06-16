@@ -5,6 +5,7 @@ import { toast } from '../components/ui/Toast';
 import { Eye, EyeOff, AlertCircle, ArrowRight, ArrowLeft, CheckCircle2, Mail, Lock, UserPlus } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
+  { role: 'Admin', email: 'admin@grevya.com', password: 'admin123', color: '#f97316', bg: '#fff7ed' },
   { role: 'HR Manager', email: 'hr@grevya.com', password: 'hr123', color: '#22c55e', bg: '#f0fdf4' },
   { role: 'Manager', email: 'manager@grevya.com', password: 'mgr123', color: '#3b82f6', bg: '#eff6ff' },
   { role: 'Employee', email: 'employee@grevya.com', password: 'emp123', color: '#8b5cf6', bg: '#f5f3ff' },
@@ -437,8 +438,12 @@ export default function LoginPage({ onBack }: { onBack?: () => void }) {
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
               {DEMO_ACCOUNTS.map(acc => (
-                <button key={acc.role} onClick={()=>fillDemo(acc)} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', borderRadius:10, border:`1px solid ${acc.color}30`, background:acc.bg, cursor:'pointer' }}>
-                  <div><div style={{ fontWeight:600, fontSize:'0.8rem', color:acc.color }}>{acc.role}</div><div style={{ fontSize:'0.7rem', color:'#64748b' }}>{acc.email}</div></div>
+                <button key={acc.role} onClick={()=>fillDemo(acc)} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'10px 14px', borderRadius:10, border:`1px solid ${acc.color}30`, background:acc.bg, cursor:'pointer', textAlign:'left' }}>
+                  <div style={{ minWidth:0 }}>
+                    <div style={{ fontWeight:600, fontSize:'0.8rem', color:acc.color }}>{acc.role}</div>
+                    <div style={{ fontSize:'0.7rem', color:'#64748b', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{acc.email}</div>
+                    <div style={{ fontSize:'0.68rem', color:'#94a3b8', marginTop:2 }}>Password: {acc.password}</div>
+                  </div>
                   <ArrowRight size={14} color={acc.color}/>
                 </button>
               ))}

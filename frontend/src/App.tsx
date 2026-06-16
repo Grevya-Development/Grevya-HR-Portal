@@ -3,6 +3,7 @@ import { useStore } from './services/store';
 import ErrorBoundary from './components/ErrorBoundary';
 import Sidebar from './components/layout/Sidebar';
 import Topbar from './components/layout/Topbar';
+import MobileBottomNav from './components/layout/MobileBottomNav';
 import AIChat from './components/ai/AIChat';
 import { ToastContainer } from './components/ui/Toast';
 import type { UserRole } from './types';
@@ -124,6 +125,13 @@ function PageContent({ page }: { page: string }) {
 export default function App() {
   const { currentUser, darkMode, sidebarOpen, authStatus, initializeAuth, setSidebarOpen } = useStore();
   const [page, setPage] = useState(() => localStorage.getItem('currentPage') || 'dashboard');
+  const [recentPages, setRecentPages] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('recentPages') || '[]');
+    } catch {
+      return [];
+    }
+  });
   const [appView, setAppView] = useState<'landing' | 'login' | 'app'>('landing');
   const isAccessReview = window.location.pathname === '/access-review';
   const isPasswordReset = window.location.pathname === '/reset-password' || window.location.pathname === '/auth/reset-password';
@@ -132,6 +140,11 @@ export default function App() {
     if (!canOpenPage(currentUser?.role, nextPage)) nextPage = 'dashboard';
     setPage(nextPage);
     localStorage.setItem('currentPage', nextPage);
+    setRecentPages(prev => {
+      const next = [nextPage, ...prev.filter(p => p !== nextPage)].slice(0, 6);
+      localStorage.setItem('recentPages', JSON.stringify(next));
+      return next;
+    });
     if (window.innerWidth <= 900) setSidebarOpen(false);
   };
 
@@ -140,7 +153,7 @@ export default function App() {
   }, [darkMode]);
 
   useEffect(() => {
-    initializeAuth().catch((err) => console.error('[Auth] Session restore failed:', err));
+    initializeAuth().catch((err: unknown) => console.error('[Auth] Session restore failed:', err));
   }, [initializeAuth]);
 
   useEffect(() => {
@@ -228,7 +241,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <div className="app-layout">
-        <Sidebar currentPage={page} onNavigate={navigate} />
+        <Sidebar currentPage={page} onNavigate={navigate} recentPages={recentPages} />
         <div className={`main-content ${!sidebarOpen ? 'sidebar-collapsed' : ''}`}>
           <Topbar currentPage={page} onNavigate={navigate} />
           <main className="page-content">
@@ -238,6 +251,7 @@ export default function App() {
             <PageContent page={page} />
           </main>
         </div>
+        <MobileBottomNav currentPage={page} onNavigate={navigate} onOpenMenu={() => setSidebarOpen(true)} />
         <AIChat />
         <ToastContainer />
       </div>

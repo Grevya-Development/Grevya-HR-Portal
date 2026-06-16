@@ -3,7 +3,7 @@ import { User, Employee, LeaveRequest, Notification, UserRole } from '../types';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import type { Profile } from '../types/database';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001/api' : '/api');
 const allowDemoAuth = import.meta.env.DEV && import.meta.env.VITE_ALLOW_DEMO_AUTH === 'true';
 
 export type LoginResult = { ok: true } | { ok: false; message: string; pending?: boolean; denied?: boolean };
