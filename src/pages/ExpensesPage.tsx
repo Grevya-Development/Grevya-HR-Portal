@@ -38,24 +38,31 @@ export default function ExpensesPage() {
   const [modal, setModal] = useState(false);
   const [actionModal, setActionModal] = useState<{ exp: Expense; type: 'approve' | 'reject' } | null>(null);
   const [comment, setComment] = useState('');
-  const [form, setForm] = useState({ category: 'Travel', amount: '', description: '', date: '' });
+  const [form, setForm] = useState({ category: 'Travel', amount: '', description: '', date: '', receipt: '' });
 
   const filtered = expenses
     .filter(e => tab === 'all' || e.status === tab)
     .filter(e => currentUser?.role === 'employee' ? e.employeeId === 'e1' : true);
 
   const counts = {
-    all: expenses.length,
-    pending: expenses.filter(e => e.status === 'pending').length,
-    approved: expenses.filter(e => e.status === 'approved').length,
-    rejected: expenses.filter(e => e.status === 'rejected').length,
+    all: filtered.length,
+    pending: filtered.filter(e => e.status === 'pending').length,
+    approved: filtered.filter(e => e.status === 'approved').length,
+    rejected: filtered.filter(e => e.status === 'rejected').length,
   };
 
   const totalApproved = expenses.filter(e => e.status === 'approved').reduce((s, e) => s + e.amount, 0);
   const totalPending = expenses.filter(e => e.status === 'pending').reduce((s, e) => s + e.amount, 0);
 
   const handleSubmit = () => {
-    if (!form.description || !form.amount || !form.date) return;
+    if (!form.description || !form.amount || !form.date || !form.receipt) {
+      toast.error('Submission Error', 'Please fill all required fields and attach a receipt.');
+      return;
+    }
+    if (Number(form.amount) <= 0) {
+      toast.error('Validation Error', 'Amount must be a positive number.');
+      return;
+    }
     const newExp: Expense = {
       id: `ex${Date.now()}`,
       employeeId: currentUser?.id || 'e1',
@@ -66,11 +73,12 @@ export default function ExpensesPage() {
       description: form.description,
       date: form.date,
       status: 'pending',
+      receipt: form.receipt,
       submittedOn: new Date().toISOString().split('T')[0],
     };
     setExpenses(prev => [newExp, ...prev]);
     setModal(false);
-    setForm({ category: 'Travel', amount: '', description: '', date: '' });
+    setForm({ category: 'Travel', amount: '', description: '', date: '', receipt: '' });
     toast.success('Expense submitted!', `₹${Number(form.amount).toLocaleString()} claim sent for approval.`);
   };
 
@@ -227,8 +235,9 @@ export default function ExpensesPage() {
                   <label className="form-label">Description *</label>
                   <textarea className="textarea" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Brief description of expense..." rows={3} />
                 </div>
-                <div style={{ padding: '12px 16px', borderRadius: 10, border: '2px dashed var(--border)', display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem' }}>
-                  <Upload size={16} /> <span>Attach receipt (PDF/Image) — click to browse</span>
+                <div className="form-group">
+                  <label className="form-label">Receipt URL/Path *</label>
+                  <input className="input" type="text" value={form.receipt} onChange={e => setForm(f => ({ ...f, receipt: e.target.value }))} placeholder="e.g., /receipts/my_receipt.pdf" />
                 </div>
               </div>
             </div>
