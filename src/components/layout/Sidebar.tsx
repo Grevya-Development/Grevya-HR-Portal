@@ -251,7 +251,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         style={{
           position: 'absolute',
           top: 22,
-          right: -12,
+          right: 0,
           width: 24,
           height: 24,
           borderRadius: '50%',

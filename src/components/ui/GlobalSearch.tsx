@@ -103,7 +103,7 @@ export default function GlobalSearch({ open, onClose, onNavigate }: GlobalSearch
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 2000,
-        background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)',
+        background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
         padding: '100px 20px 20px',
         animation: 'fadeIn 0.15s ease',
