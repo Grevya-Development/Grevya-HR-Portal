@@ -360,6 +360,19 @@ export function AIPage() {
 export function PayslipsPage() {
   const [selected, setSelected] = useState(PAYSLIPS[0]);
 
+  const downloadPayslip = (payslip: typeof PAYSLIPS[0]) => {
+    const content = `Payslip for ${payslip.month} ${payslip.year}\n\nNet Salary: ₹${payslip.netSalary.toLocaleString()}\nBasic: ₹${payslip.basicSalary.toLocaleString()}\nHRA: ₹${payslip.hra.toLocaleString()}\nConveyance: ₹${payslip.conveyance.toLocaleString()}\nMedical: ₹${payslip.medical.toLocaleString()}\nBonus: ₹${payslip.bonus.toLocaleString()}\nPF: -₹${payslip.pf.toLocaleString()}\nTax: -₹${payslip.tax.toLocaleString()}`; // Simplified content
+    const blob = new Blob([content], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Payslip_${payslip.month}_${payslip.year}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="animate-fade">
       <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 20 }}>
@@ -396,7 +409,7 @@ export function PayslipsPage() {
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Kiran Patel · EMP001</span>
               </div>
             </div>
-            <button className="btn btn-primary" onClick={() => window.print()}><Download size={15} /> Download PDF</button>
+            <button className="btn btn-primary" onClick={() => downloadPayslip(selected)}><Download size={15} /> Download PDF</button>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>

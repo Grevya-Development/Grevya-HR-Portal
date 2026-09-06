@@ -11,6 +11,7 @@ export default function LeavePage() {
   const [tab, setTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState(false);
+  const [reasonError, setReasonError] = useState(false);
   const [actionModal, setActionModal] = useState<{ req: LeaveRequest; type: 'approve' | 'reject' } | null>(null);
   const [comment, setComment] = useState('');
   const [form, setForm] = useState({
@@ -22,17 +23,19 @@ export default function LeavePage() {
 
   const isHRorManager = currentUser?.role !== 'employee';
 
-  const filtered = leaveRequests
-    .filter(r => tab === 'all' || r.status === tab)
-    .filter(r => !search || r.employeeName.toLowerCase().includes(search.toLowerCase()) || r.type.includes(search.toLowerCase()))
+  const baseLeaveRequests = leaveRequests
     .filter(r => currentUser?.role === 'employee' ? r.employeeId === 'e1' : true);
 
   const counts = {
-    all: leaveRequests.length,
-    pending: leaveRequests.filter(r => r.status === 'pending').length,
-    approved: leaveRequests.filter(r => r.status === 'approved').length,
-    rejected: leaveRequests.filter(r => r.status === 'rejected').length,
+    all: baseLeaveRequests.length,
+    pending: baseLeaveRequests.filter(r => r.status === 'pending').length,
+    approved: baseLeaveRequests.filter(r => r.status === 'approved').length,
+    rejected: baseLeaveRequests.filter(r => r.status === 'rejected').length,
   };
+
+  const filtered = baseLeaveRequests
+    .filter(r => tab === 'all' || r.status === tab)
+    .filter(r => !search || r.employeeName.toLowerCase().includes(search.toLowerCase()) || r.type.includes(search.toLowerCase()));
 
   const calcDays = (start: string, end: string) => {
     if (!start || !end) return 0;
@@ -41,7 +44,13 @@ export default function LeavePage() {
   };
 
   const handleApply = () => {
-    if (!form.startDate || !form.endDate || !form.reason) return;
+    if (!form.reason) {
+      setReasonError(true);
+      toast.error('Reason required', 'Please provide a reason for your leave.');
+      return;
+    }
+    setReasonError(false);
+    if (!form.startDate || !form.endDate) return;
     const days = calcDays(form.startDate, form.endDate);
     applyLeave({
       employeeId: currentUser?.id || 'e1',
@@ -247,8 +256,9 @@ export default function LeavePage() {
                   </div>
                 )}
                 <div className="form-group">
-                  <label className="form-label">Reason</label>
-                  <textarea className="textarea" value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} placeholder="Brief reason for leave..." rows={3} />
+                  <label className="form-label">Reason *</label>
+                  <textarea className="textarea" value={form.reason} onChange={e => { setForm(f => ({ ...f, reason: e.target.value })); setReasonError(false); }} placeholder="Brief reason for leave..." rows={3} style={reasonError ? { borderColor: '#ef4444' } : {}} />
+                  {reasonError && <p className="form-error">Reason is required</p>}
                 </div>
               </div>
             </div>

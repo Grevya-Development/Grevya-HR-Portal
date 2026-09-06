@@ -40,8 +40,8 @@ const TEAM_EVENTS = [
 export default function CalendarPage() {
   const { leaveRequests } = useStore();
   const today = new Date();
-  const [year, setYear] = useState(2024);
-  const [month, setMonth] = useState(2); // March 2024
+  const [year, setYear] = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const firstDay = new Date(year, month, 1).getDay();

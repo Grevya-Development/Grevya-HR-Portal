@@ -7,6 +7,19 @@ import {
 } from 'recharts';
 import { Clock, Calendar, TrendingUp, Star, Flame, Award, ChevronRight, Download } from 'lucide-react';
 
+const downloadPayslip = (payslip: typeof PAYSLIPS[0]) => {
+  const content = `Payslip for ${payslip.month} ${payslip.year}\n\nNet Salary: ₹${payslip.netSalary.toLocaleString()}\nBasic: ₹${payslip.basicSalary.toLocaleString()}\nHRA: ₹${payslip.hra.toLocaleString()}\nConveyance: ₹${payslip.conveyance.toLocaleString()}\nMedical: ₹${payslip.medical.toLocaleString()}\nBonus: ₹${payslip.bonus.toLocaleString()}\nPF: -₹${payslip.pf.toLocaleString()}\nTax: -₹${payslip.tax.toLocaleString()}`; // Simplified content
+  const blob = new Blob([content], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Payslip_${payslip.month}_${payslip.year}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
 export default function EmployeeDashboard() {
   const { currentUser, leaveRequests } = useStore();
   const myLeaves = leaveRequests.filter(r => r.employeeId === 'e1');
@@ -196,7 +209,7 @@ export default function EmployeeDashboard() {
                   <div style={{ fontWeight: 600, fontSize: '0.8rem' }}>{slip.month} {slip.year}</div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Net: ₹{slip.netSalary.toLocaleString()}</div>
                 </div>
-                <button className="btn btn-ghost btn-sm" style={{ gap: 4 }}>
+                <button className="btn btn-ghost btn-sm" style={{ gap: 4 }} onClick={() => downloadPayslip(slip)}>
                   <Download size={12} /> PDF
                 </button>
               </div>
