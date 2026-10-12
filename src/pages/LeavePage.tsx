@@ -23,19 +23,24 @@ export default function LeavePage() {
 
   const isHRorManager = currentUser?.role !== 'employee';
 
-  const baseLeaveRequests = leaveRequests
-    .filter(r => currentUser?.role === 'employee' ? r.employeeId === 'e1' : true);
+  // Main leaves state array from Zustand store
+  const leaves = leaveRequests || [];
 
   const counts = {
-    all: baseLeaveRequests.length,
-    pending: baseLeaveRequests.filter(r => r.status === 'pending').length,
-    approved: baseLeaveRequests.filter(r => r.status === 'approved').length,
-    rejected: baseLeaveRequests.filter(r => r.status === 'rejected').length,
+    all: leaves.length,
+    pending: leaves.filter(l => l.status === 'pending').length,
+    approved: leaves.filter(l => l.status === 'approved').length,
+    rejected: leaves.filter(l => l.status === 'rejected').length,
   };
 
-  const filtered = baseLeaveRequests
+  const filtered = leaves
     .filter(r => tab === 'all' || r.status === tab)
-    .filter(r => !search || r.employeeName.toLowerCase().includes(search.toLowerCase()) || r.type.includes(search.toLowerCase()));
+    .filter(r =>
+      !search ||
+      r.employeeName.toLowerCase().includes(search.toLowerCase()) ||
+      r.type.toLowerCase().includes(search.toLowerCase()) ||
+      r.reason.toLowerCase().includes(search.toLowerCase())
+    );
 
   const calcDays = (start: string, end: string) => {
     if (!start || !end) return 0;
@@ -43,7 +48,7 @@ export default function LeavePage() {
     return Math.max(1, Math.ceil(diff / 86400000) + 1);
   };
 
-  const handleApply = () => {
+  const handleApply = async () => {
     if (!form.reason) {
       setReasonError(true);
       toast.error('Reason required', 'Please provide a reason for your leave.');
@@ -52,7 +57,7 @@ export default function LeavePage() {
     setReasonError(false);
     if (!form.startDate || !form.endDate) return;
     const days = calcDays(form.startDate, form.endDate);
-    applyLeave({
+    await applyLeave({
       employeeId: currentUser?.id || 'e1',
       employeeName: currentUser?.name || 'Kiran Patel',
       employeeAvatar: currentUser?.avatar || 'KP',
@@ -65,6 +70,9 @@ export default function LeavePage() {
     });
     setModal(false);
     setForm({ type: 'casual', startDate: '', endDate: '', reason: '' });
+    if (tab === 'approved' || tab === 'rejected') {
+      setTab('all');
+    }
     toast.success('Leave request submitted!', `${days} day(s) of ${form.type} leave sent for approval.`);
   };
 
@@ -133,22 +141,14 @@ export default function LeavePage() {
 
       {/* Tabs */}
       <div className="tab-nav">
-        {(['all', 'pending', 'approved', 'rejected'] as const).map(t => (
-          <button key={t} className={`tab-btn ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
-            {t.charAt(0).toUpperCase() + t.slice(1)}
-            <span style={{
-              marginLeft: 6,
-              background: tab === t ? 'var(--primary)' : 'var(--border)',
-              color: tab === t ? 'white' : 'var(--text-muted)',
-              borderRadius: 10,
-              padding: '1px 7px',
-              fontSize: '0.7rem',
-              fontWeight: 600,
-            }}>
-              {counts[t]}
-            </span>
-          </button>
-        ))}
+        {(['all', 'pending', 'approved', 'rejected'] as const).map(t => {
+          const label = t.charAt(0).toUpperCase() + t.slice(1);
+          return (
+            <button key={t} className={`tab-btn ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
+              {label} ({counts[t]})
+            </button>
+          );
+        })}
       </div>
 
       {/* Table */}
@@ -157,7 +157,7 @@ export default function LeavePage() {
           <table>
             <thead>
               <tr>
-                {isHRorManager && <th>Employee</th>}
+                <th>Employee</th>
                 <th>Type</th>
                 <th>Duration</th>
                 <th>Days</th>
@@ -170,17 +170,15 @@ export default function LeavePage() {
             <tbody>
               {filtered.map(req => (
                 <tr key={req.id}>
-                  {isHRorManager && (
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div className="avatar avatar-sm">{req.employeeAvatar}</div>
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: '0.8rem' }}>{req.employeeName}</div>
-                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{req.department}</div>
-                        </div>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div className="avatar avatar-sm">{req.employeeAvatar || 'KP'}</div>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '0.8rem' }}>{req.employeeName || 'Kiran Patel'}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{req.department || 'Engineering'}</div>
                       </div>
-                    </td>
-                  )}
+                    </div>
+                  </td>
                   <td><span className={`badge ${typeColor[req.type] || 'badge-gray'}`} style={{ textTransform: 'capitalize' }}>{req.type}</span></td>
                   <td style={{ fontSize: '0.8rem' }}>{req.startDate} → {req.endDate}</td>
                   <td style={{ fontWeight: 600 }}>{req.days}d</td>

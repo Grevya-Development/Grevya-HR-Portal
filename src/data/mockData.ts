@@ -1,4 +1,4 @@
-import { Employee, LeaveRequest, AttendanceRecord, Notification, AIInsight, PerformanceData, DepartmentStat, PaySlip, Badge, HRManager } from '../types';
+import { Employee, LeaveRequest, AttendanceRecord, Notification, AIInsight, PerformanceData, DepartmentStat, PaySlip, Badge, HRManager, Expense } from '../types';
 
 export const BADGES: Badge[] = [
   { id: 'perfect_attendance', name: 'Perfect Attendance', icon: '🏆', description: '30 days no absence', color: '#22c55e' },
@@ -159,6 +159,15 @@ export const LEAVE_REQUESTS: LeaveRequest[] = [
     days: 1, reason: 'Not feeling well', status: 'approved',
     appliedOn: '2024-03-21', approvedBy: 'Divya Kumar',
   },
+];
+
+export const INITIAL_EXPENSES: Expense[] = [
+  { id: 'ex1', employeeId: 'e1', employeeName: 'Kiran Patel', employeeAvatar: 'KP', category: 'Travel', amount: 4500, description: 'Cab to client office (Whitefield)', date: '2024-03-15', status: 'approved', submittedOn: '2024-03-16', approvedBy: 'Divya Kumar', receipt: 'receipt_march1.pdf' },
+  { id: 'ex2', employeeId: 'e5', employeeName: 'Arjun Mehta', employeeAvatar: 'AM', category: 'Software', amount: 2999, description: 'JetBrains IDE annual subscription', date: '2024-03-10', status: 'pending', submittedOn: '2024-03-12' },
+  { id: 'ex3', employeeId: 'e2', employeeName: 'Sneha Rao', employeeAvatar: 'SR', category: 'Training', amount: 8000, description: 'Content strategy certification course', date: '2024-03-08', status: 'approved', submittedOn: '2024-03-09', approvedBy: 'Ravi Nair' },
+  { id: 'ex4', employeeId: 'e8', employeeName: 'Ananya Singh', employeeAvatar: 'AS', category: 'Food & Entertainment', amount: 3200, description: 'Team lunch with clients', date: '2024-03-20', status: 'pending', submittedOn: '2024-03-21' },
+  { id: 'ex5', employeeId: 'e9', employeeName: 'Vikram Joshi', employeeAvatar: 'VJ', category: 'Office Supplies', amount: 1450, description: 'USB-C hub and cables', date: '2024-03-05', status: 'rejected', submittedOn: '2024-03-06', approvedBy: 'Divya Kumar', comments: 'Use company procurement portal for hardware.' },
+  { id: 'ex6', employeeId: 'e7', employeeName: 'Rahul Gupta', employeeAvatar: 'RG', category: 'Travel', amount: 12000, description: 'Flight to Delhi for client meeting', date: '2024-03-25', status: 'pending', submittedOn: '2024-03-26' },
 ];
 
 export const ATTENDANCE_RECORDS: AttendanceRecord[] = Array.from({ length: 30 }, (_, i) => ({

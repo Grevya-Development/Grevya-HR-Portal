@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { User, Employee, LeaveRequest, Notification, HRManager } from '../types';
-import { DEMO_USERS, EMPLOYEES, HR_MANAGERS, LEAVE_REQUESTS, NOTIFICATIONS } from '../data/mockData';
+import { User, Employee, LeaveRequest, Notification, HRManager, Expense } from '../types';
+import { DEMO_USERS, EMPLOYEES, HR_MANAGERS, LEAVE_REQUESTS, NOTIFICATIONS, INITIAL_EXPENSES } from '../data/mockData';
 
 const STORAGE_KEYS = {
   user: 'grevya.currentUser',
@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   leaveRequests: 'grevya.leaveRequests',
   notifications: 'grevya.notifications',
   hrManagers: 'grevya.hrManagers',
+  expenses: 'grevya.expenses',
 };
 
 const readStorage = <T,>(key: string, fallback: T): T => {
@@ -31,6 +32,7 @@ interface AppState {
   leaveRequests: LeaveRequest[];
   notifications: Notification[];
   hrManagers: HRManager[];
+  expenses: Expense[];
   darkMode: boolean;
   sidebarOpen: boolean;
 
@@ -52,6 +54,10 @@ interface AppState {
   rejectLeave: (id: string, comments?: string) => Promise<void>;
   applyLeave: (request: Omit<LeaveRequest, 'id' | 'status' | 'appliedOn'>) => Promise<void>;
 
+  addExpense: (expense: Omit<Expense, 'id' | 'status' | 'submittedOn'>) => Promise<void>;
+  approveExpense: (id: string, comments?: string) => Promise<void>;
+  rejectExpense: (id: string, comments?: string) => Promise<void>;
+
   markNotificationRead: (id: string) => Promise<void>;
   markAllRead: () => Promise<void>;
 }
@@ -62,6 +68,7 @@ export const useStore = create<AppState>((set, get) => ({
   leaveRequests: readStorage<LeaveRequest[]>(STORAGE_KEYS.leaveRequests, LEAVE_REQUESTS),
   notifications: readStorage<Notification[]>(STORAGE_KEYS.notifications, NOTIFICATIONS),
   hrManagers: readStorage<HRManager[]>(STORAGE_KEYS.hrManagers, HR_MANAGERS),
+  expenses: readStorage<Expense[]>(STORAGE_KEYS.expenses, INITIAL_EXPENSES),
   darkMode: false,
   sidebarOpen: true,
 
@@ -70,7 +77,8 @@ export const useStore = create<AppState>((set, get) => ({
     const leaveRequests = readStorage<LeaveRequest[]>(STORAGE_KEYS.leaveRequests, LEAVE_REQUESTS);
     const notifications = readStorage<Notification[]>(STORAGE_KEYS.notifications, NOTIFICATIONS);
     const hrManagers = readStorage<HRManager[]>(STORAGE_KEYS.hrManagers, HR_MANAGERS);
-    set({ employees, leaveRequests, notifications, hrManagers });
+    const expenses = readStorage<Expense[]>(STORAGE_KEYS.expenses, INITIAL_EXPENSES);
+    set({ employees, leaveRequests, notifications, hrManagers, expenses });
   },
 
   login: async (email, password) => {
@@ -170,8 +178,11 @@ export const useStore = create<AppState>((set, get) => ({
       ...request,
       id: `l${Date.now()}`,
       status: 'pending',
-      appliedOn: new Date().toISOString().split('T')[0],
+      appliedOn: (request as any).appliedOn || new Date().toISOString().split('T')[0],
     };
+    if (!leaveRequest.appliedOn) {
+      leaveRequest.appliedOn = new Date().toISOString().split('T')[0];
+    }
     const leaveRequests = [leaveRequest, ...get().leaveRequests];
     writeStorage(STORAGE_KEYS.leaveRequests, leaveRequests);
     set({ leaveRequests });
@@ -189,5 +200,35 @@ export const useStore = create<AppState>((set, get) => ({
     const notifications = get().notifications.map(notification => ({ ...notification, read: true }));
     writeStorage(STORAGE_KEYS.notifications, notifications);
     set({ notifications });
+  },
+
+  addExpense: async (expenseData) => {
+    const newExpense: Expense = {
+      ...expenseData,
+      id: `ex${Date.now()}`,
+      status: 'pending',
+      submittedOn: new Date().toISOString().split('T')[0],
+    };
+    const expenses = [newExpense, ...get().expenses];
+    writeStorage(STORAGE_KEYS.expenses, expenses);
+    set({ expenses });
+  },
+
+  approveExpense: async (id, comments) => {
+    const user = get().currentUser;
+    const expenses = get().expenses.map(expense =>
+      expense.id === id ? { ...expense, status: 'approved' as const, approvedBy: user?.name, comments } : expense,
+    );
+    writeStorage(STORAGE_KEYS.expenses, expenses);
+    set({ expenses });
+  },
+
+  rejectExpense: async (id, comments) => {
+    const user = get().currentUser;
+    const expenses = get().expenses.map(expense =>
+      expense.id === id ? { ...expense, status: 'rejected' as const, approvedBy: user?.name, comments } : expense,
+    );
+    writeStorage(STORAGE_KEYS.expenses, expenses);
+    set({ expenses });
   },
 }));
