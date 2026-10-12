@@ -1,0 +1,13 @@
+com\grevya\hrportal\HrPortalApiApplication$Candidate.class
+com\grevya\hrportal\HrPortalApiApplication$HrManager.class
+com\grevya\hrportal\HrPortalApiApplication$LoginRequest.class
+com\grevya\hrportal\HrPortalApiApplication.class
+com\grevya\hrportal\HrPortalApiApplication$Bootstrap.class
+com\grevya\hrportal\HrPortalApiApplication$UserAccount.class
+com\grevya\hrportal\HrPortalApiApplication$LeaveDecision.class
+com\grevya\hrportal\HrPortalApiApplication$JobOpening.class
+com\grevya\hrportal\HrPortalApiApplication$NotificationItem.class
+com\grevya\hrportal\HrPortalApiApplication$User.class
+com\grevya\hrportal\HrPortalApiApplication$LeaveRequest.class
+com\grevya\hrportal\HrPortalApiApplication$Employee.class
+com\grevya\hrportal\HrPortalApiApplication$HrPortalController.class
