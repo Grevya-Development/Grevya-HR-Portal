@@ -59,6 +59,12 @@ export interface LeaveRequest {
   appliedOn: string;
   approvedBy?: string;
   comments?: string;
+  employee?: {
+    id: string;
+    name: string;
+    avatar?: string;
+    department?: string;
+  };
 }
 
 export interface Expense {

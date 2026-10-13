@@ -27,14 +27,17 @@ export default function EmployeeDashboard() {
       (currentUser?.name && r.employeeName.toLowerCase() === currentUser.name.toLowerCase())
   );
 
+  const leavesUsed = myLeaves.filter(l => l.status === 'approved').reduce((sum, l) => sum + l.days, 0);
+  const leavesTotal = 34; // 18 Annual + 10 Sick + 6 Casual
+
   // Mock current user employee data
   const empData = {
     points: 2840,
     streak: 45,
     attendance: 97,
     performance: 92,
-    leavesUsed: 8,
-    leavesTotal: 24,
+    leavesUsed,
+    leavesTotal,
     badges: ['perfect_attendance', 'top_performer', 'early_bird'],
   };
 

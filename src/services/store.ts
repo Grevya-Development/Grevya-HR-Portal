@@ -5,10 +5,46 @@ import { DEMO_USERS, EMPLOYEES, HR_MANAGERS, LEAVE_REQUESTS, NOTIFICATIONS, INIT
 const STORAGE_KEYS = {
   user: 'grevya.currentUser',
   employees: 'grevya.employees',
-  leaveRequests: 'grevya.leaveRequests',
+  leaveRequests: 'grevya_leaves',
   notifications: 'grevya.notifications',
   hrManagers: 'grevya.hrManagers',
   expenses: 'grevya.expenses',
+};
+
+const LEAVES_STORAGE_KEY = 'grevya_leaves';
+
+const normalizeLeave = (req: LeaveRequest): LeaveRequest => {
+  const empId = req.employeeId || (req as any).employee?.id || '';
+  const empName = req.employeeName || (req as any).employee?.name || '';
+  const empAvatar = req.employeeAvatar || (req as any).employee?.avatar || '';
+  const empDept = req.department || (req as any).employee?.department || '';
+  return {
+    ...req,
+    employeeId: empId,
+    employeeName: empName,
+    employeeAvatar: empAvatar,
+    department: empDept,
+    employee: {
+      id: empId,
+      name: empName,
+      avatar: empAvatar,
+      department: empDept,
+    },
+  };
+};
+
+export const readLeavesFromStorage = (): LeaveRequest[] => {
+  const primary = readStorage<LeaveRequest[] | null>(LEAVES_STORAGE_KEY, null);
+  if (primary && Array.isArray(primary)) return primary.map(normalizeLeave);
+  const legacy = readStorage<LeaveRequest[] | null>('grevya.leaveRequests', null);
+  if (legacy && Array.isArray(legacy)) return legacy.map(normalizeLeave);
+  return (LEAVE_REQUESTS || []).map(normalizeLeave);
+};
+
+export const persistLeavesToStorage = (leaves: LeaveRequest[]) => {
+  const normalized = leaves.map(normalizeLeave);
+  writeStorage(LEAVES_STORAGE_KEY, normalized);
+  writeStorage('grevya.leaveRequests', normalized);
 };
 
 const readStorage = <T,>(key: string, fallback: T): T => {
@@ -65,7 +101,7 @@ interface AppState {
 export const useStore = create<AppState>((set, get) => ({
   currentUser: readStorage<User | null>(STORAGE_KEYS.user, null),
   employees: readStorage<Employee[]>(STORAGE_KEYS.employees, EMPLOYEES),
-  leaveRequests: readStorage<LeaveRequest[]>(STORAGE_KEYS.leaveRequests, LEAVE_REQUESTS),
+  leaveRequests: readLeavesFromStorage(),
   notifications: readStorage<Notification[]>(STORAGE_KEYS.notifications, NOTIFICATIONS),
   hrManagers: readStorage<HRManager[]>(STORAGE_KEYS.hrManagers, HR_MANAGERS),
   expenses: readStorage<Expense[]>(STORAGE_KEYS.expenses, INITIAL_EXPENSES),
@@ -74,7 +110,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   fetchInitialData: async () => {
     const employees = readStorage<Employee[]>(STORAGE_KEYS.employees, EMPLOYEES);
-    const leaveRequests = readStorage<LeaveRequest[]>(STORAGE_KEYS.leaveRequests, LEAVE_REQUESTS);
+    const leaveRequests = readLeavesFromStorage();
     const notifications = readStorage<Notification[]>(STORAGE_KEYS.notifications, NOTIFICATIONS);
     const hrManagers = readStorage<HRManager[]>(STORAGE_KEYS.hrManagers, HR_MANAGERS);
     const expenses = readStorage<Expense[]>(STORAGE_KEYS.expenses, INITIAL_EXPENSES);
@@ -121,7 +157,7 @@ export const useStore = create<AppState>((set, get) => ({
     const employees = get().employees.filter(employee => employee.id !== id);
     const leaveRequests = get().leaveRequests.filter(request => request.employeeId !== id);
     writeStorage(STORAGE_KEYS.employees, employees);
-    writeStorage(STORAGE_KEYS.leaveRequests, leaveRequests);
+    persistLeavesToStorage(leaveRequests);
     set({ employees, leaveRequests });
   },
 
@@ -158,33 +194,43 @@ export const useStore = create<AppState>((set, get) => ({
   approveLeave: async (id, comments) => {
     const user = get().currentUser;
     const leaveRequests = get().leaveRequests.map(request =>
-      request.id === id ? { ...request, status: 'approved' as const, approvedBy: user?.name, comments } : request,
+      request.id === id ? normalizeLeave({ ...request, status: 'approved' as const, approvedBy: user?.name, comments }) : request,
     );
-    writeStorage(STORAGE_KEYS.leaveRequests, leaveRequests);
+    persistLeavesToStorage(leaveRequests);
     set({ leaveRequests });
   },
 
   rejectLeave: async (id, comments) => {
     const user = get().currentUser;
     const leaveRequests = get().leaveRequests.map(request =>
-      request.id === id ? { ...request, status: 'rejected' as const, approvedBy: user?.name, comments } : request,
+      request.id === id ? normalizeLeave({ ...request, status: 'rejected' as const, approvedBy: user?.name, comments }) : request,
     );
-    writeStorage(STORAGE_KEYS.leaveRequests, leaveRequests);
+    persistLeavesToStorage(leaveRequests);
     set({ leaveRequests });
   },
 
   applyLeave: async (request) => {
-    const leaveRequest: LeaveRequest = {
+    const user = get().currentUser;
+    const empId = request.employeeId || (request as any).employee?.id || user?.id || 'e1';
+    const empName = request.employeeName || (request as any).employee?.name || user?.name || 'Kiran Patel';
+    const empAvatar = request.employeeAvatar || (request as any).employee?.avatar || user?.avatar || 'KP';
+    const empDept = request.department || (request as any).employee?.department || user?.department || 'Engineering';
+
+    const leaveRequest: LeaveRequest = normalizeLeave({
       ...request,
-      id: `l${Date.now()}`,
+      id: (request as any).id || `l${Date.now()}`,
+      employeeId: empId,
+      employeeName: empName,
+      employeeAvatar: empAvatar,
+      department: empDept,
       status: 'pending',
       appliedOn: (request as any).appliedOn || new Date().toISOString().split('T')[0],
-    };
+    });
     if (!leaveRequest.appliedOn) {
       leaveRequest.appliedOn = new Date().toISOString().split('T')[0];
     }
     const leaveRequests = [leaveRequest, ...get().leaveRequests];
-    writeStorage(STORAGE_KEYS.leaveRequests, leaveRequests);
+    persistLeavesToStorage(leaveRequests);
     set({ leaveRequests });
   },
 
