@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React, { useState, useRef } from 'react';
 import { useStore } from '../services/store';
 import { Expense } from '../types';
@@ -55,50 +54,11 @@ export default function ExpensesPage() {
   const { currentUser, expenses, addExpense, approveExpense, rejectExpense } = useStore();
   const isHRorManager = currentUser?.role !== 'employee';
   const isEmployee = currentUser?.role === 'employee';
-=======
-import React, { useState } from 'react';
-import { useStore } from '../services/store';
-import { Plus, X, Receipt, CheckCircle2, XCircle, Clock, Upload, Download } from 'lucide-react';
-import { toast } from '../components/ui/Toast';
-
-interface Expense {
-  id: string;
-  employeeId: string;
-  employeeName: string;
-  employeeAvatar: string;
-  category: string;
-  amount: number;
-  description: string;
-  date: string;
-  status: 'pending' | 'approved' | 'rejected';
-  receipt?: string;
-  submittedOn: string;
-  approvedBy?: string;
-  comments?: string;
-}
-
-const CATEGORIES = ['Travel', 'Food & Entertainment', 'Office Supplies', 'Training', 'Medical', 'Software', 'Other'];
-
-const INITIAL_EXPENSES: Expense[] = [
-  { id: 'ex1', employeeId: 'e1', employeeName: 'Kiran Patel', employeeAvatar: 'KP', category: 'Travel', amount: 4500, description: 'Cab to client office (Whitefield)', date: '2024-03-15', status: 'approved', submittedOn: '2024-03-16', approvedBy: 'Divya Kumar', receipt: 'receipt_march1.pdf' },
-  { id: 'ex2', employeeId: 'e5', employeeName: 'Arjun Mehta', employeeAvatar: 'AM', category: 'Software', amount: 2999, description: 'JetBrains IDE annual subscription', date: '2024-03-10', status: 'pending', submittedOn: '2024-03-12' },
-  { id: 'ex3', employeeId: 'e2', employeeName: 'Sneha Rao', employeeAvatar: 'SR', category: 'Training', amount: 8000, description: 'Content strategy certification course', date: '2024-03-08', status: 'approved', submittedOn: '2024-03-09', approvedBy: 'Ravi Nair' },
-  { id: 'ex4', employeeId: 'e8', employeeName: 'Ananya Singh', employeeAvatar: 'AS', category: 'Food & Entertainment', amount: 3200, description: 'Team lunch with clients', date: '2024-03-20', status: 'pending', submittedOn: '2024-03-21' },
-  { id: 'ex5', employeeId: 'e9', employeeName: 'Vikram Joshi', employeeAvatar: 'VJ', category: 'Office Supplies', amount: 1450, description: 'USB-C hub and cables', date: '2024-03-05', status: 'rejected', submittedOn: '2024-03-06', approvedBy: 'Divya Kumar', comments: 'Use company procurement portal for hardware.' },
-  { id: 'ex6', employeeId: 'e7', employeeName: 'Rahul Gupta', employeeAvatar: 'RG', category: 'Travel', amount: 12000, description: 'Flight to Delhi for client meeting', date: '2024-03-25', status: 'pending', submittedOn: '2024-03-26' },
-];
-
-export default function ExpensesPage() {
-  const { currentUser } = useStore();
-  const isHRorManager = currentUser?.role !== 'employee';
-  const [expenses, setExpenses] = useState<Expense[]>(INITIAL_EXPENSES);
->>>>>>> origin/main
   const [tab, setTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [modal, setModal] = useState(false);
   const [actionModal, setActionModal] = useState<{ exp: Expense; type: 'approve' | 'reject' } | null>(null);
   const [comment, setComment] = useState('');
   const [form, setForm] = useState({ category: 'Travel', amount: '', description: '', date: '', receipt: '' });
-<<<<<<< HEAD
   const [receiptError, setReceiptError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -164,25 +124,6 @@ export default function ExpensesPage() {
       if (!trimmedReceipt) {
         setReceiptError('Receipt URL or file path is required.');
       }
-=======
-
-  const filtered = expenses
-    .filter(e => tab === 'all' || e.status === tab)
-    .filter(e => currentUser?.role === 'employee' ? e.employeeId === 'e1' : true);
-
-  const counts = {
-    all: filtered.length,
-    pending: filtered.filter(e => e.status === 'pending').length,
-    approved: filtered.filter(e => e.status === 'approved').length,
-    rejected: filtered.filter(e => e.status === 'rejected').length,
-  };
-
-  const totalApproved = expenses.filter(e => e.status === 'approved').reduce((s, e) => s + e.amount, 0);
-  const totalPending = expenses.filter(e => e.status === 'pending').reduce((s, e) => s + e.amount, 0);
-
-  const handleSubmit = () => {
-    if (!form.description || !form.amount || !form.date || !form.receipt) {
->>>>>>> origin/main
       toast.error('Submission Error', 'Please fill all required fields and attach a receipt.');
       return;
     }
@@ -190,7 +131,6 @@ export default function ExpensesPage() {
       toast.error('Validation Error', 'Amount must be a positive number.');
       return;
     }
-<<<<<<< HEAD
     if (!isValidReceipt(trimmedReceipt)) {
       setReceiptError('Please enter a valid URL (e.g., https://...) or file path (e.g., /receipts/doc.pdf)');
       toast.error('Validation Error', 'Invalid receipt URL or file path format.');
@@ -200,16 +140,10 @@ export default function ExpensesPage() {
     const currentEmpId = currentUser?.id || 'e1';
     await addExpense({
       employeeId: currentEmpId,
-=======
-    const newExp: Expense = {
-      id: `ex${Date.now()}`,
-      employeeId: currentUser?.id || 'e1',
->>>>>>> origin/main
       employeeName: currentUser?.name || 'Kiran Patel',
       employeeAvatar: currentUser?.avatar || 'KP',
       category: form.category,
       amount: Number(form.amount),
-<<<<<<< HEAD
       description: form.description.trim(),
       date: form.date,
       receipt: trimmedReceipt,
@@ -234,29 +168,6 @@ export default function ExpensesPage() {
       await rejectExpense(exp.id, comment);
       toast.error('Expense rejected', `${exp.employeeName}'s ₹${exp.amount.toLocaleString()} claim rejected.`);
     }
-=======
-      description: form.description,
-      date: form.date,
-      status: 'pending',
-      receipt: form.receipt,
-      submittedOn: new Date().toISOString().split('T')[0],
-    };
-    setExpenses(prev => [newExp, ...prev]);
-    setModal(false);
-    setForm({ category: 'Travel', amount: '', description: '', date: '', receipt: '' });
-    toast.success('Expense submitted!', `₹${Number(form.amount).toLocaleString()} claim sent for approval.`);
-  };
-
-  const handleAction = () => {
-    if (!actionModal) return;
-    const { exp, type } = actionModal;
-    setExpenses(prev => prev.map(e => e.id === exp.id
-      ? { ...e, status: type === 'approve' ? 'approved' : 'rejected', approvedBy: currentUser?.name, comments: comment }
-      : e
-    ));
-    if (type === 'approve') toast.success('Expense approved!', `₹${exp.amount.toLocaleString()} claim for ${exp.employeeName} approved.`);
-    else toast.error('Expense rejected', `${exp.employeeName}'s ₹${exp.amount.toLocaleString()} claim rejected.`);
->>>>>>> origin/main
     setActionModal(null);
     setComment('');
   };
@@ -281,11 +192,7 @@ export default function ExpensesPage() {
         </div>
         <div className="card" style={{ padding: '20px 24px', borderLeft: '3px solid #8b5cf6' }}>
           <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 8 }}>Total Claims</div>
-<<<<<<< HEAD
           <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#8b5cf6' }}>{totalClaims}</div>
-=======
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#8b5cf6' }}>{expenses.length}</div>
->>>>>>> origin/main
         </div>
       </div>
 
@@ -380,18 +287,12 @@ export default function ExpensesPage() {
 
       {/* Submit modal */}
       {modal && (
-<<<<<<< HEAD
         <div className="modal-overlay" onClick={() => { setModal(false); setReceiptError(''); }}>
           <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Submit Expense Claim</h3>
               <button className="btn btn-ghost btn-icon" onClick={() => { setModal(false); setReceiptError(''); }}><X size={18} /></button>
             </div>
-=======
-        <div className="modal-overlay" onClick={() => setModal(false)}>
-          <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header"><h3>Submit Expense Claim</h3><button className="btn btn-ghost btn-icon" onClick={() => setModal(false)}><X size={18} /></button></div>
->>>>>>> origin/main
             <div className="modal-body">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div className="grid-2" style={{ gap: 14 }}>
@@ -415,7 +316,6 @@ export default function ExpensesPage() {
                   <textarea className="textarea" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Brief description of expense..." rows={3} />
                 </div>
                 <div className="form-group">
-<<<<<<< HEAD
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <label className="form-label" style={{ marginBottom: 0 }}>Receipt URL/Path *</label>
                     <button
@@ -466,15 +366,10 @@ export default function ExpensesPage() {
                       Accepts valid web URLs (https://...) or local file paths (.pdf, .png, .jpg, .docx)
                     </div>
                   )}
-=======
-                  <label className="form-label">Receipt URL/Path *</label>
-                  <input className="input" type="text" value={form.receipt} onChange={e => setForm(f => ({ ...f, receipt: e.target.value }))} placeholder="e.g., /receipts/my_receipt.pdf" />
->>>>>>> origin/main
                 </div>
               </div>
             </div>
             <div className="modal-footer">
-<<<<<<< HEAD
               <button className="btn btn-secondary" onClick={() => { setModal(false); setReceiptError(''); }}>Cancel</button>
               <button
                 className="btn btn-primary"
@@ -483,10 +378,6 @@ export default function ExpensesPage() {
               >
                 <Receipt size={14} /> Submit Claim
               </button>
-=======
-              <button className="btn btn-secondary" onClick={() => setModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSubmit} disabled={!form.description || !form.amount || !form.date}><Receipt size={14} /> Submit Claim</button>
->>>>>>> origin/main
             </div>
           </div>
         </div>
