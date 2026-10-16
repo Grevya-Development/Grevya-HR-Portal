@@ -1,4 +1,4 @@
-import { Employee, LeaveRequest, AttendanceRecord, Notification, AIInsight, PerformanceData, DepartmentStat, PaySlip, Badge, HRManager } from '../types';
+import { Employee, LeaveRequest, AttendanceRecord, Notification, AIInsight, PerformanceData, DepartmentStat, PaySlip, Badge, HRManager, Expense } from '../types';
 
 export const BADGES: Badge[] = [
   { id: 'perfect_attendance', name: 'Perfect Attendance', icon: '🏆', description: '30 days no absence', color: '#22c55e' },
@@ -116,49 +116,15 @@ export const HR_MANAGERS: HRManager[] = [
   { id: 'm5', name: 'Naina Mehta', email: 'naina.mehta@grevya.com', department: 'Finance', status: 'inactive', avatar: 'NM', joinDate: '2023-01-16', phone: '+91 77665 22918', location: 'Mumbai' },
 ];
 
-export const LEAVE_REQUESTS: LeaveRequest[] = [
-  {
-    id: 'l1', employeeId: 'e5', employeeName: 'Arjun Mehta', employeeAvatar: 'AM',
-    department: 'Engineering', type: 'sick', startDate: '2024-03-18', endDate: '2024-03-22',
-    days: 5, reason: 'Fever and flu, doctor recommended rest', status: 'pending',
-    appliedOn: '2024-03-17',
-  },
-  {
-    id: 'l2', employeeId: 'e4', employeeName: 'Priya Sharma', employeeAvatar: 'PS',
-    department: 'Design', type: 'casual', startDate: '2024-03-25', endDate: '2024-03-26',
-    days: 2, reason: 'Family function and travel', status: 'approved',
-    appliedOn: '2024-03-15', approvedBy: 'Ravi Nair', comments: 'Approved. Enjoy!',
-  },
-  {
-    id: 'l3', employeeId: 'e8', employeeName: 'Ananya Singh', employeeAvatar: 'AS',
-    department: 'Marketing', type: 'annual', startDate: '2024-04-01', endDate: '2024-04-07',
-    days: 7, reason: 'Annual vacation with family', status: 'pending',
-    appliedOn: '2024-03-20',
-  },
-  {
-    id: 'l4', employeeId: 'e11', employeeName: 'Suresh Pillai', employeeAvatar: 'SP',
-    department: 'Sales', type: 'emergency', startDate: '2024-03-19', endDate: '2024-03-19',
-    days: 1, reason: 'Medical emergency in family', status: 'approved',
-    appliedOn: '2024-03-19', approvedBy: 'Kiran Patel',
-  },
-  {
-    id: 'l5', employeeId: 'e7', employeeName: 'Rahul Gupta', employeeAvatar: 'RG',
-    department: 'Finance', type: 'casual', startDate: '2024-03-28', endDate: '2024-03-29',
-    days: 2, reason: 'Personal errands', status: 'rejected',
-    appliedOn: '2024-03-22', approvedBy: 'Ravi Nair', comments: 'Month-end closing. Cannot be approved.',
-  },
-  {
-    id: 'l6', employeeId: 'e2', employeeName: 'Sneha Rao', employeeAvatar: 'SR',
-    department: 'Content', type: 'annual', startDate: '2024-04-15', endDate: '2024-04-20',
-    days: 6, reason: 'Vacation', status: 'pending',
-    appliedOn: '2024-03-25',
-  },
-  {
-    id: 'l7', employeeId: 'e12', employeeName: 'Pooja Reddy', employeeAvatar: 'PR',
-    department: 'Design', type: 'sick', startDate: '2024-03-21', endDate: '2024-03-21',
-    days: 1, reason: 'Not feeling well', status: 'approved',
-    appliedOn: '2024-03-21', approvedBy: 'Divya Kumar',
-  },
+export const LEAVE_REQUESTS: LeaveRequest[] = [];
+
+export const INITIAL_EXPENSES: Expense[] = [
+  { id: 'ex1', employeeId: 'e1', employeeName: 'Kiran Patel', employeeAvatar: 'KP', category: 'Travel', amount: 4500, description: 'Cab to client office (Whitefield)', date: '2024-03-15', status: 'approved', submittedOn: '2024-03-16', approvedBy: 'Divya Kumar', receipt: 'receipt_march1.pdf' },
+  { id: 'ex2', employeeId: 'e5', employeeName: 'Arjun Mehta', employeeAvatar: 'AM', category: 'Software', amount: 2999, description: 'JetBrains IDE annual subscription', date: '2024-03-10', status: 'pending', submittedOn: '2024-03-12' },
+  { id: 'ex3', employeeId: 'e2', employeeName: 'Sneha Rao', employeeAvatar: 'SR', category: 'Training', amount: 8000, description: 'Content strategy certification course', date: '2024-03-08', status: 'approved', submittedOn: '2024-03-09', approvedBy: 'Ravi Nair' },
+  { id: 'ex4', employeeId: 'e8', employeeName: 'Ananya Singh', employeeAvatar: 'AS', category: 'Food & Entertainment', amount: 3200, description: 'Team lunch with clients', date: '2024-03-20', status: 'pending', submittedOn: '2024-03-21' },
+  { id: 'ex5', employeeId: 'e9', employeeName: 'Vikram Joshi', employeeAvatar: 'VJ', category: 'Office Supplies', amount: 1450, description: 'USB-C hub and cables', date: '2024-03-05', status: 'rejected', submittedOn: '2024-03-06', approvedBy: 'Divya Kumar', comments: 'Use company procurement portal for hardware.' },
+  { id: 'ex6', employeeId: 'e7', employeeName: 'Rahul Gupta', employeeAvatar: 'RG', category: 'Travel', amount: 12000, description: 'Flight to Delhi for client meeting', date: '2024-03-25', status: 'pending', submittedOn: '2024-03-26' },
 ];
 
 export const ATTENDANCE_RECORDS: AttendanceRecord[] = Array.from({ length: 30 }, (_, i) => ({

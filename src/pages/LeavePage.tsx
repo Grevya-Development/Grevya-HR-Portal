@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../services/store';
 import { LeaveRequest } from '../types';
-import { Search, Plus, Check, X, Calendar } from 'lucide-react';
+import { Search, Plus, Check, X, Calendar, AlertCircle } from 'lucide-react';
 import { toast } from '../components/ui/Toast';
 
 const LEAVE_TYPES = ['sick', 'casual', 'annual', 'maternity', 'paternity', 'emergency'] as const;
@@ -21,29 +21,128 @@ export default function LeavePage() {
     reason: '',
   });
 
-  const isHRorManager = currentUser?.role !== 'employee';
+  const userRole = (currentUser?.role || '').toLowerCase();
+  const isEmployee = userRole === 'employee';
+  // Admin, HR, and Manager can view all leaves and have approval controls
+  const canManageLeaves = userRole === 'admin' || userRole === 'hr' || userRole === 'hr_manager' || userRole === 'manager';
+  const isHRorAdmin = canManageLeaves;
+  const isHRorManager = canManageLeaves;
 
-  const baseLeaveRequests = leaveRequests
-    .filter(r => currentUser?.role === 'employee' ? r.employeeId === 'e1' : true);
+  // Helper to match leave requests to the current user
+  const isOwnLeave = (r: LeaveRequest) => {
+    const currentId = currentUser?.id;
+    const currentName = currentUser?.name?.trim().toLowerCase();
 
-  const counts = {
-    all: baseLeaveRequests.length,
-    pending: baseLeaveRequests.filter(r => r.status === 'pending').length,
-    approved: baseLeaveRequests.filter(r => r.status === 'approved').length,
-    rejected: baseLeaveRequests.filter(r => r.status === 'rejected').length,
+    const empObjId = (r as any).employee?.id;
+    const empObjName = (r as any).employee?.name?.trim()?.toLowerCase();
+    const reqEmpId = r.employeeId || empObjId;
+    const reqEmpName = (r.employeeName?.trim() || empObjName || '').toLowerCase();
+
+    // Match by leave.employee.id === currentUser.id or leave.employeeId === currentUser.id
+    if (currentId && (reqEmpId === currentId || empObjId === currentId)) return true;
+
+    // Match by leave.employee.name === currentUser.name or leave.employeeName === currentUser.name
+    if (currentName && (reqEmpName === currentName || empObjName === currentName)) return true;
+
+    // Support demo Kiran Patel cross-matching ('u3' in demo auth, 'e1' in employee records)
+    const isKiranUser = currentName === 'kiran patel' || currentId === 'u3' || currentId === 'e1';
+    if (isKiranUser && (reqEmpId === 'e1' || reqEmpId === 'u3' || empObjId === 'e1' || empObjId === 'u3' || reqEmpName === 'kiran patel')) {
+      return true;
+    }
+
+    // Fallback if employee currentUser is missing id/name
+    if (!currentId && !currentName && (reqEmpId === 'e1' || reqEmpId === 'u3' || reqEmpName === 'kiran patel')) {
+      return true;
+    }
+
+    return false;
   };
 
-  const filtered = baseLeaveRequests
+  // Role-based filtering for leave requests:
+  // - If user.role === 'employee': Show only leaves where leave.employee.id === currentUser.id or leave.employee.name === currentUser.name
+  // - If user.role === 'admin' || user.role === 'hr' || user.role === 'manager': Show ALL leave requests from all employees, including newly submitted pending requests
+  const leaves = isEmployee ? (leaveRequests || []).filter(isOwnLeave) : (leaveRequests || []);
+
+  // Dynamic tab badge counts reflecting only the role-filtered leaves
+  const counts = {
+    all: leaves.length,
+    pending: leaves.filter(l => l.status === 'pending').length,
+    approved: leaves.filter(l => l.status === 'approved').length,
+    rejected: leaves.filter(l => l.status === 'rejected').length,
+  };
+
+  const filtered = leaves
     .filter(r => tab === 'all' || r.status === tab)
-    .filter(r => !search || r.employeeName.toLowerCase().includes(search.toLowerCase()) || r.type.includes(search.toLowerCase()));
+    .filter(r =>
+      !search ||
+      r.employeeName.toLowerCase().includes(search.toLowerCase()) ||
+      r.type.toLowerCase().includes(search.toLowerCase()) ||
+      r.reason.toLowerCase().includes(search.toLowerCase())
+    );
 
   const calcDays = (start: string, end: string) => {
     if (!start || !end) return 0;
     const diff = new Date(end).getTime() - new Date(start).getTime();
+    if (diff < 0) return 0;
     return Math.max(1, Math.ceil(diff / 86400000) + 1);
   };
 
-  const handleApply = () => {
+  // Leave allowances configuration
+  const LEAVE_ALLOWANCES = [
+    { type: 'Annual', total: 18, color: '#22c55e' },
+    { type: 'Sick', total: 10, color: '#ef4444' },
+    { type: 'Casual', total: 6, color: '#3b82f6' },
+  ];
+
+  const DEFAULT_ALLOWANCES: Record<string, number> = {
+    annual: 18,
+    sick: 10,
+    casual: 6,
+    maternity: 90,
+    paternity: 15,
+    emergency: 5,
+  };
+
+  // Dynamic leave balance based on current user's approved leave requests
+  const userLeaves = isEmployee ? leaves : (leaveRequests || []).filter(isOwnLeave);
+
+  const getRemainingDaysForType = (type: string): number => {
+    const key = type.toLowerCase();
+    const config = LEAVE_ALLOWANCES.find(a => a.type.toLowerCase() === key);
+    const totalAllowance = config ? config.total : (DEFAULT_ALLOWANCES[key] ?? 10);
+    const usedDays = userLeaves
+      .filter(l => l.type.toLowerCase() === key && l.status === 'approved')
+      .reduce((sum, l) => sum + l.days, 0);
+    // Requirement 4: Cap display counts so 'days remaining' never drops below 0
+    return Math.max(0, totalAllowance - usedDays);
+  };
+
+  const leaveBalance = LEAVE_ALLOWANCES.map(({ type, total, color }) => {
+    const usedDays = userLeaves
+      .filter(l => l.type.toLowerCase() === type.toLowerCase() && l.status === 'approved')
+      .reduce((sum, l) => sum + l.days, 0);
+
+    // Requirement 4: Cap display counts in top cards so 'days remaining' never drops below 0
+    const remainingDays = Math.max(0, total - usedDays);
+    const progressWidth = total > 0 ? Math.min(100, Math.max(0, (usedDays / total) * 100)) : 0;
+
+    return {
+      type,
+      total,
+      used: usedDays,
+      remaining: remainingDays,
+      color,
+      progressWidth,
+    };
+  });
+
+  // Calculate requested duration and validation against remaining balance
+  const requestedDays = form.startDate && form.endDate ? calcDays(form.startDate, form.endDate) : 0;
+  const leaveTypeName = form.type.charAt(0).toUpperCase() + form.type.slice(1);
+  const remainingDaysForSelectedType = getRemainingDaysForType(form.type);
+  const isInsufficientBalance = requestedDays > 0 && requestedDays > remainingDaysForSelectedType;
+
+  const handleApply = async () => {
     if (!form.reason) {
       setReasonError(true);
       toast.error('Reason required', 'Please provide a reason for your leave.');
@@ -51,8 +150,23 @@ export default function LeavePage() {
     }
     setReasonError(false);
     if (!form.startDate || !form.endDate) return;
+
     const days = calcDays(form.startDate, form.endDate);
-    applyLeave({
+    if (days <= 0) {
+      toast.error('Invalid dates', 'End date must be after or equal to start date.');
+      return;
+    }
+
+    // Requirement 3: Prevent submission if requestedDays > remainingDays
+    if (days > remainingDaysForSelectedType) {
+      toast.error(
+        'Insufficient leave balance',
+        `Insufficient leave balance! You have only ${remainingDaysForSelectedType} day(s) remaining for ${leaveTypeName} Leave.`
+      );
+      return;
+    }
+
+    await applyLeave({
       employeeId: currentUser?.id || 'e1',
       employeeName: currentUser?.name || 'Kiran Patel',
       employeeAvatar: currentUser?.avatar || 'KP',
@@ -65,17 +179,20 @@ export default function LeavePage() {
     });
     setModal(false);
     setForm({ type: 'casual', startDate: '', endDate: '', reason: '' });
+    if (tab === 'approved' || tab === 'rejected') {
+      setTab('all');
+    }
     toast.success('Leave request submitted!', `${days} day(s) of ${form.type} leave sent for approval.`);
   };
 
-  const handleAction = () => {
-    if (!actionModal) return;
+  const handleAction = async () => {
+    if (!actionModal || !canManageLeaves) return;
     const { req, type } = actionModal;
     if (type === 'approve') {
-      approveLeave(req.id, comment);
+      await approveLeave(req.id, comment);
       toast.success(`Leave approved`, `${req.employeeName}'s ${req.type} leave (${req.days}d) approved.`);
     } else {
-      rejectLeave(req.id, comment);
+      await rejectLeave(req.id, comment);
       toast.error(`Leave rejected`, `${req.employeeName}'s request has been declined.`);
     }
     setActionModal(null);
@@ -87,23 +204,17 @@ export default function LeavePage() {
     maternity: 'badge-purple', paternity: 'badge-purple', emergency: 'badge-yellow',
   };
 
-  const leaveBalance = [
-    { type: 'Annual', used: 8, total: 18, color: '#22c55e' },
-    { type: 'Sick', used: 2, total: 10, color: '#ef4444' },
-    { type: 'Casual', used: 3, total: 6, color: '#3b82f6' },
-  ];
-
   return (
     <div className="animate-fade">
       {/* Leave balance (for employees) */}
-      {currentUser?.role === 'employee' && (
+      {isEmployee && (
         <div className="grid-3 mb-6">
           {leaveBalance.map(lb => (
             <div key={lb.type} className="card" style={{ padding: '20px 24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                 <div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{lb.type} Leave</div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 700, marginTop: 4 }}>{lb.total - lb.used}</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, marginTop: 4 }}>{lb.remaining}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>days remaining</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
@@ -111,7 +222,7 @@ export default function LeavePage() {
                 </div>
               </div>
               <div className="progress">
-                <div className="progress-bar" style={{ width: `${(lb.used / lb.total) * 100}%`, background: lb.color }} />
+                <div className="progress-bar" style={{ width: `${lb.progressWidth}%`, background: lb.color }} />
               </div>
             </div>
           ))}
@@ -133,22 +244,14 @@ export default function LeavePage() {
 
       {/* Tabs */}
       <div className="tab-nav">
-        {(['all', 'pending', 'approved', 'rejected'] as const).map(t => (
-          <button key={t} className={`tab-btn ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
-            {t.charAt(0).toUpperCase() + t.slice(1)}
-            <span style={{
-              marginLeft: 6,
-              background: tab === t ? 'var(--primary)' : 'var(--border)',
-              color: tab === t ? 'white' : 'var(--text-muted)',
-              borderRadius: 10,
-              padding: '1px 7px',
-              fontSize: '0.7rem',
-              fontWeight: 600,
-            }}>
-              {counts[t]}
-            </span>
-          </button>
-        ))}
+        {(['all', 'pending', 'approved', 'rejected'] as const).map(t => {
+          const label = t.charAt(0).toUpperCase() + t.slice(1);
+          return (
+            <button key={t} className={`tab-btn ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
+              {label} ({counts[t]})
+            </button>
+          );
+        })}
       </div>
 
       {/* Table */}
@@ -157,30 +260,28 @@ export default function LeavePage() {
           <table>
             <thead>
               <tr>
-                {isHRorManager && <th>Employee</th>}
+                <th>Employee</th>
                 <th>Type</th>
                 <th>Duration</th>
                 <th>Days</th>
                 <th>Reason</th>
                 <th>Applied On</th>
                 <th>Status</th>
-                {isHRorManager && <th>Actions</th>}
+                {canManageLeaves && <th>Actions</th>}
               </tr>
             </thead>
             <tbody>
               {filtered.map(req => (
                 <tr key={req.id}>
-                  {isHRorManager && (
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div className="avatar avatar-sm">{req.employeeAvatar}</div>
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: '0.8rem' }}>{req.employeeName}</div>
-                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{req.department}</div>
-                        </div>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div className="avatar avatar-sm">{req.employeeAvatar || 'KP'}</div>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '0.8rem' }}>{req.employeeName || 'Kiran Patel'}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{req.department || 'Engineering'}</div>
                       </div>
-                    </td>
-                  )}
+                    </div>
+                  </td>
                   <td><span className={`badge ${typeColor[req.type] || 'badge-gray'}`} style={{ textTransform: 'capitalize' }}>{req.type}</span></td>
                   <td style={{ fontSize: '0.8rem' }}>{req.startDate} → {req.endDate}</td>
                   <td style={{ fontWeight: 600 }}>{req.days}d</td>
@@ -196,15 +297,27 @@ export default function LeavePage() {
                       <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 2 }}>"{req.comments}"</div>
                     )}
                   </td>
-                  {isHRorManager && (
+                  {canManageLeaves && (
                     <td>
                       {req.status === 'pending' && (
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button className="btn btn-primary btn-sm" onClick={() => setActionModal({ req, type: 'approve' })}>
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <button
+                            className="btn btn-primary btn-sm"
+                            title="Approve Leave"
+                            onClick={() => setActionModal({ req, type: 'approve' })}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', fontSize: '0.75rem' }}
+                          >
                             <Check size={12} />
+                            <span>Approve</span>
                           </button>
-                          <button className="btn btn-danger btn-sm" onClick={() => setActionModal({ req, type: 'reject' })}>
+                          <button
+                            className="btn btn-danger btn-sm"
+                            title="Reject Leave"
+                            onClick={() => setActionModal({ req, type: 'reject' })}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', fontSize: '0.75rem' }}
+                          >
                             <X size={12} />
+                            <span>Reject</span>
                           </button>
                         </div>
                       )}
@@ -218,6 +331,11 @@ export default function LeavePage() {
             <div className="empty-state">
               <Calendar size={32} />
               <h3>No leave requests found</h3>
+              {isEmployee && (
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: 4 }}>
+                  You don't have any {tab !== 'all' ? `${tab} ` : ''}leave requests.
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -249,10 +367,21 @@ export default function LeavePage() {
                     <input className="input" type="date" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} min={form.startDate} />
                   </div>
                 </div>
-                {form.startDate && form.endDate && (
-                  <div className="alert alert-info" style={{ fontSize: '0.8rem' }}>
-                    <Calendar size={14} />
-                    Duration: <strong>{calcDays(form.startDate, form.endDate)} day(s)</strong>
+                {form.startDate && form.endDate && requestedDays > 0 && (
+                  <div className="alert alert-info" style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Calendar size={14} />
+                      <span>Duration: <strong>{requestedDays} day(s)</strong></span>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', opacity: 0.9 }}>
+                      Remaining balance: <strong>{remainingDaysForSelectedType} day(s)</strong>
+                    </span>
+                  </div>
+                )}
+                {isInsufficientBalance && (
+                  <div className="alert alert-error" style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                    <span>Insufficient leave balance! You have only {remainingDaysForSelectedType} day(s) remaining for {leaveTypeName} Leave.</span>
                   </div>
                 )}
                 <div className="form-group">
@@ -264,7 +393,7 @@ export default function LeavePage() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleApply} disabled={!form.startDate || !form.endDate || !form.reason}>
+              <button className="btn btn-primary" onClick={handleApply} disabled={!form.startDate || !form.endDate || !form.reason || isInsufficientBalance}>
                 Submit Request
               </button>
             </div>
@@ -273,7 +402,7 @@ export default function LeavePage() {
       )}
 
       {/* Approve/Reject Modal */}
-      {actionModal && (
+      {canManageLeaves && actionModal && (
         <div className="modal-overlay" onClick={() => setActionModal(null)}>
           <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">

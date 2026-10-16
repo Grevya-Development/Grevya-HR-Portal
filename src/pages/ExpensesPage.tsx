@@ -1,61 +1,129 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useStore } from '../services/store';
+import { Expense } from '../types';
 import { Plus, X, Receipt, CheckCircle2, XCircle, Clock, Upload, Download } from 'lucide-react';
 import { toast } from '../components/ui/Toast';
 
-interface Expense {
-  id: string;
-  employeeId: string;
-  employeeName: string;
-  employeeAvatar: string;
-  category: string;
-  amount: number;
-  description: string;
-  date: string;
-  status: 'pending' | 'approved' | 'rejected';
-  receipt?: string;
-  submittedOn: string;
-  approvedBy?: string;
-  comments?: string;
-}
-
 const CATEGORIES = ['Travel', 'Food & Entertainment', 'Office Supplies', 'Training', 'Medical', 'Software', 'Other'];
 
-const INITIAL_EXPENSES: Expense[] = [
-  { id: 'ex1', employeeId: 'e1', employeeName: 'Kiran Patel', employeeAvatar: 'KP', category: 'Travel', amount: 4500, description: 'Cab to client office (Whitefield)', date: '2024-03-15', status: 'approved', submittedOn: '2024-03-16', approvedBy: 'Divya Kumar', receipt: 'receipt_march1.pdf' },
-  { id: 'ex2', employeeId: 'e5', employeeName: 'Arjun Mehta', employeeAvatar: 'AM', category: 'Software', amount: 2999, description: 'JetBrains IDE annual subscription', date: '2024-03-10', status: 'pending', submittedOn: '2024-03-12' },
-  { id: 'ex3', employeeId: 'e2', employeeName: 'Sneha Rao', employeeAvatar: 'SR', category: 'Training', amount: 8000, description: 'Content strategy certification course', date: '2024-03-08', status: 'approved', submittedOn: '2024-03-09', approvedBy: 'Ravi Nair' },
-  { id: 'ex4', employeeId: 'e8', employeeName: 'Ananya Singh', employeeAvatar: 'AS', category: 'Food & Entertainment', amount: 3200, description: 'Team lunch with clients', date: '2024-03-20', status: 'pending', submittedOn: '2024-03-21' },
-  { id: 'ex5', employeeId: 'e9', employeeName: 'Vikram Joshi', employeeAvatar: 'VJ', category: 'Office Supplies', amount: 1450, description: 'USB-C hub and cables', date: '2024-03-05', status: 'rejected', submittedOn: '2024-03-06', approvedBy: 'Divya Kumar', comments: 'Use company procurement portal for hardware.' },
-  { id: 'ex6', employeeId: 'e7', employeeName: 'Rahul Gupta', employeeAvatar: 'RG', category: 'Travel', amount: 12000, description: 'Flight to Delhi for client meeting', date: '2024-03-25', status: 'pending', submittedOn: '2024-03-26' },
-];
+/**
+ * Validates that the receipt is either a valid URL format (http/https/file)
+ * or a valid local / server path with supported document or image extension.
+ */
+function isValidReceipt(val: string): boolean {
+  const trimmed = val.trim();
+  if (!trimmed || trimmed.length < 3) return false;
+
+  // 1. Web or file protocol URL
+  try {
+    const url = new URL(trimmed);
+    if (['http:', 'https:', 'file:'].includes(url.protocol)) {
+      return true;
+    }
+  } catch {
+    // Continue to check relative or file path formats
+  }
+
+  // 2. Domain-based URL without protocol (e.g., www.example.com/receipt.pdf)
+  if (/^www\.[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(\/.*)?$/i.test(trimmed)) {
+    return true;
+  }
+
+  // 3. Supported file extensions for receipts
+  const validExtensionPattern = /\.(pdf|png|jpe?g|webp|gif|svg|doc|docx|txt|csv)$/i;
+
+  // A. Root-relative or relative path starting with / or ./ or ../ (e.g., /receipts/march.pdf)
+  if (/^(\/|\.\/|\.\.\/|\\|\.\\|\.\.\\)/.test(trimmed)) {
+    return trimmed.length >= 4 && (validExtensionPattern.test(trimmed) || trimmed.includes('/'));
+  }
+
+  // B. Windows drive letter path (e.g., C:\receipts\march.pdf or C:/receipts/march.pdf)
+  if (/^[a-zA-Z]:[\\/]/.test(trimmed)) {
+    return trimmed.length >= 5;
+  }
+
+  // C. Relative filename with a valid file extension (e.g., receipt_march1.pdf)
+  if (validExtensionPattern.test(trimmed) && trimmed.length >= 5) {
+    return !/[<>:"|?*]/.test(trimmed);
+  }
+
+  return false;
+}
 
 export default function ExpensesPage() {
-  const { currentUser } = useStore();
+  const { currentUser, expenses, addExpense, approveExpense, rejectExpense } = useStore();
   const isHRorManager = currentUser?.role !== 'employee';
-  const [expenses, setExpenses] = useState<Expense[]>(INITIAL_EXPENSES);
+  const isEmployee = currentUser?.role === 'employee';
   const [tab, setTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [modal, setModal] = useState(false);
   const [actionModal, setActionModal] = useState<{ exp: Expense; type: 'approve' | 'reject' } | null>(null);
   const [comment, setComment] = useState('');
   const [form, setForm] = useState({ category: 'Travel', amount: '', description: '', date: '', receipt: '' });
+  const [receiptError, setReceiptError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const filtered = expenses
-    .filter(e => tab === 'all' || e.status === tab)
-    .filter(e => currentUser?.role === 'employee' ? e.employeeId === 'e1' : true);
+  // Current claims list for the active user context (employees see their claims, HR/managers see all claims)
+  const claims = expenses.filter(e => {
+    if (!isEmployee) return true;
+    return (
+      e.employeeId === currentUser?.id ||
+      e.employeeId === 'e1' ||
+      e.employeeId === 'u3' ||
+      (currentUser?.name && e.employeeName.toLowerCase() === currentUser.name.toLowerCase()) ||
+      (!currentUser && e.employeeId === 'e1')
+    );
+  });
+
+  const filtered = claims.filter(e => tab === 'all' || e.status === tab);
 
   const counts = {
-    all: filtered.length,
-    pending: filtered.filter(e => e.status === 'pending').length,
-    approved: filtered.filter(e => e.status === 'approved').length,
-    rejected: filtered.filter(e => e.status === 'rejected').length,
+    all: claims.length,
+    pending: claims.filter(e => e.status === 'pending').length,
+    approved: claims.filter(e => e.status === 'approved').length,
+    rejected: claims.filter(e => e.status === 'rejected').length,
   };
 
-  const totalApproved = expenses.filter(e => e.status === 'approved').reduce((s, e) => s + e.amount, 0);
-  const totalPending = expenses.filter(e => e.status === 'pending').reduce((s, e) => s + e.amount, 0);
+  const totalApproved = claims
+    .filter(c => c.status === 'approved')
+    .reduce((sum, c) => sum + Number(c.amount), 0);
 
-  const handleSubmit = () => {
-    if (!form.description || !form.amount || !form.date || !form.receipt) {
+  const totalPending = claims
+    .filter(c => c.status === 'pending')
+    .reduce((sum, c) => sum + Number(c.amount), 0);
+
+  const totalClaims = claims.length;
+
+  const validateReceiptField = (val: string): boolean => {
+    const trimmed = val.trim();
+    if (!trimmed) {
+      setReceiptError('Receipt URL or file path is required.');
+      return false;
+    }
+    if (!isValidReceipt(trimmed)) {
+      setReceiptError('Please enter a valid URL (e.g., https://...) or file path (e.g., /receipts/doc.pdf)');
+      return false;
+    }
+    setReceiptError('');
+    return true;
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const sanitizedName = file.name.replace(/\s+/g, '_');
+      const generatedPath = `/receipts/${sanitizedName}`;
+      setForm(f => ({ ...f, receipt: generatedPath }));
+      setReceiptError('');
+      toast.success('Receipt selected', file.name);
+    }
+  };
+
+  const handleSubmit = async () => {
+    const trimmedReceipt = form.receipt.trim();
+    if (!form.description.trim() || !form.amount || !form.date || !trimmedReceipt) {
+      if (!trimmedReceipt) {
+        setReceiptError('Receipt URL or file path is required.');
+      }
       toast.error('Submission Error', 'Please fill all required fields and attach a receipt.');
       return;
     }
@@ -63,34 +131,43 @@ export default function ExpensesPage() {
       toast.error('Validation Error', 'Amount must be a positive number.');
       return;
     }
-    const newExp: Expense = {
-      id: `ex${Date.now()}`,
-      employeeId: currentUser?.id || 'e1',
+    if (!isValidReceipt(trimmedReceipt)) {
+      setReceiptError('Please enter a valid URL (e.g., https://...) or file path (e.g., /receipts/doc.pdf)');
+      toast.error('Validation Error', 'Invalid receipt URL or file path format.');
+      return;
+    }
+
+    const currentEmpId = currentUser?.id || 'e1';
+    await addExpense({
+      employeeId: currentEmpId,
       employeeName: currentUser?.name || 'Kiran Patel',
       employeeAvatar: currentUser?.avatar || 'KP',
       category: form.category,
       amount: Number(form.amount),
-      description: form.description,
+      description: form.description.trim(),
       date: form.date,
-      status: 'pending',
-      receipt: form.receipt,
-      submittedOn: new Date().toISOString().split('T')[0],
-    };
-    setExpenses(prev => [newExp, ...prev]);
+      receipt: trimmedReceipt,
+    });
+
     setModal(false);
+    setReceiptError('');
     setForm({ category: 'Travel', amount: '', description: '', date: '', receipt: '' });
+    if (tab === 'approved' || tab === 'rejected') {
+      setTab('all');
+    }
     toast.success('Expense submitted!', `₹${Number(form.amount).toLocaleString()} claim sent for approval.`);
   };
 
-  const handleAction = () => {
+  const handleAction = async () => {
     if (!actionModal) return;
     const { exp, type } = actionModal;
-    setExpenses(prev => prev.map(e => e.id === exp.id
-      ? { ...e, status: type === 'approve' ? 'approved' : 'rejected', approvedBy: currentUser?.name, comments: comment }
-      : e
-    ));
-    if (type === 'approve') toast.success('Expense approved!', `₹${exp.amount.toLocaleString()} claim for ${exp.employeeName} approved.`);
-    else toast.error('Expense rejected', `${exp.employeeName}'s ₹${exp.amount.toLocaleString()} claim rejected.`);
+    if (type === 'approve') {
+      await approveExpense(exp.id, comment);
+      toast.success('Expense approved!', `₹${exp.amount.toLocaleString()} claim for ${exp.employeeName} approved.`);
+    } else {
+      await rejectExpense(exp.id, comment);
+      toast.error('Expense rejected', `${exp.employeeName}'s ₹${exp.amount.toLocaleString()} claim rejected.`);
+    }
     setActionModal(null);
     setComment('');
   };
@@ -115,7 +192,7 @@ export default function ExpensesPage() {
         </div>
         <div className="card" style={{ padding: '20px 24px', borderLeft: '3px solid #8b5cf6' }}>
           <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 8 }}>Total Claims</div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#8b5cf6' }}>{expenses.length}</div>
+          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#8b5cf6' }}>{totalClaims}</div>
         </div>
       </div>
 
@@ -210,9 +287,12 @@ export default function ExpensesPage() {
 
       {/* Submit modal */}
       {modal && (
-        <div className="modal-overlay" onClick={() => setModal(false)}>
+        <div className="modal-overlay" onClick={() => { setModal(false); setReceiptError(''); }}>
           <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header"><h3>Submit Expense Claim</h3><button className="btn btn-ghost btn-icon" onClick={() => setModal(false)}><X size={18} /></button></div>
+            <div className="modal-header">
+              <h3>Submit Expense Claim</h3>
+              <button className="btn btn-ghost btn-icon" onClick={() => { setModal(false); setReceiptError(''); }}><X size={18} /></button>
+            </div>
             <div className="modal-body">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div className="grid-2" style={{ gap: 14 }}>
@@ -236,14 +316,68 @@ export default function ExpensesPage() {
                   <textarea className="textarea" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Brief description of expense..." rows={3} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Receipt URL/Path *</label>
-                  <input className="input" type="text" value={form.receipt} onChange={e => setForm(f => ({ ...f, receipt: e.target.value }))} placeholder="e.g., /receipts/my_receipt.pdf" />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label className="form-label" style={{ marginBottom: 0 }}>Receipt URL/Path *</label>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      style={{ padding: '2px 8px', fontSize: '0.72rem', height: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload size={12} /> Browse File
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx"
+                      style={{ display: 'none' }}
+                      onChange={handleFileUpload}
+                    />
+                  </div>
+                  <input
+                    className="input"
+                    type="text"
+                    value={form.receipt}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setForm(f => ({ ...f, receipt: val }));
+                      if (receiptError) {
+                        if (!val.trim()) {
+                          setReceiptError('Receipt URL or file path is required.');
+                        } else if (isValidReceipt(val)) {
+                          setReceiptError('');
+                        }
+                      }
+                    }}
+                    onBlur={e => {
+                      if (e.target.value.trim()) {
+                        validateReceiptField(e.target.value);
+                      }
+                    }}
+                    placeholder="e.g., https://example.com/receipt.pdf or /receipts/doc.pdf"
+                    style={receiptError ? { borderColor: '#ef4444', boxShadow: '0 0 0 3px rgba(239,68,68,0.15)' } : {}}
+                  />
+                  {receiptError ? (
+                    <div style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span>⚠️</span> {receiptError}
+                    </div>
+                  ) : (
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: 2 }}>
+                      Accepts valid web URLs (https://...) or local file paths (.pdf, .png, .jpg, .docx)
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSubmit} disabled={!form.description || !form.amount || !form.date}><Receipt size={14} /> Submit Claim</button>
+              <button className="btn btn-secondary" onClick={() => { setModal(false); setReceiptError(''); }}>Cancel</button>
+              <button
+                className="btn btn-primary"
+                onClick={handleSubmit}
+                disabled={!form.description.trim() || !form.amount || !form.date || !form.receipt.trim() || !!receiptError}
+              >
+                <Receipt size={14} /> Submit Claim
+              </button>
             </div>
           </div>
         </div>

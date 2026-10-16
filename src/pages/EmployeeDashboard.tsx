@@ -6,23 +6,29 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { Clock, Calendar, TrendingUp, Star, Flame, Award, ChevronRight, Download } from 'lucide-react';
+import { downloadPayslipPdf } from '../utils/payslipPdf';
 
 const downloadPayslip = (payslip: typeof PAYSLIPS[0]) => {
-  const content = `Payslip for ${payslip.month} ${payslip.year}\n\nNet Salary: ₹${payslip.netSalary.toLocaleString()}\nBasic: ₹${payslip.basicSalary.toLocaleString()}\nHRA: ₹${payslip.hra.toLocaleString()}\nConveyance: ₹${payslip.conveyance.toLocaleString()}\nMedical: ₹${payslip.medical.toLocaleString()}\nBonus: ₹${payslip.bonus.toLocaleString()}\nPF: -₹${payslip.pf.toLocaleString()}\nTax: -₹${payslip.tax.toLocaleString()}`; // Simplified content
-  const blob = new Blob([content], { type: 'application/pdf' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Payslip_${payslip.month}_${payslip.year}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  downloadPayslipPdf(payslip, {
+    name: 'Kiran Patel',
+    code: 'EMP001',
+    designation: 'Backend Developer',
+    department: 'Engineering',
+  });
 };
 
 export default function EmployeeDashboard() {
   const { currentUser, leaveRequests } = useStore();
-  const myLeaves = leaveRequests.filter(r => r.employeeId === 'e1');
+  const myLeaves = leaveRequests.filter(
+    r =>
+      r.employeeId === 'e1' ||
+      r.employeeId === currentUser?.id ||
+      r.employeeId === 'u3' ||
+      (currentUser?.name && r.employeeName.toLowerCase() === currentUser.name.toLowerCase())
+  );
+
+  const leavesUsed = myLeaves.filter(l => l.status === 'approved').reduce((sum, l) => sum + l.days, 0);
+  const leavesTotal = 34; // 18 Annual + 10 Sick + 6 Casual
 
   // Mock current user employee data
   const empData = {
@@ -30,8 +36,8 @@ export default function EmployeeDashboard() {
     streak: 45,
     attendance: 97,
     performance: 92,
-    leavesUsed: 8,
-    leavesTotal: 24,
+    leavesUsed,
+    leavesTotal,
     badges: ['perfect_attendance', 'top_performer', 'early_bird'],
   };
 

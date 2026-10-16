@@ -50,7 +50,7 @@ export default function Topbar({ currentPage, onNavigate }: TopbarProps) {
       display: 'flex',
       alignItems: 'center',
       padding: '0 24px',
-      gap: 16,
+      gap: 20,
       position: 'sticky',
       top: 0,
       zIndex: 100,
@@ -62,33 +62,47 @@ export default function Topbar({ currentPage, onNavigate }: TopbarProps) {
       </button>
 
       {/* Page title */}
-      <div style={{ flex: 1 }}>
-        <h2 style={{ fontSize: '1.125rem', fontWeight: 600, margin: 0 }}>
+      <div style={{ flexShrink: 0, minWidth: 'max-content' }}>
+        <h2 style={{ fontSize: '1.125rem', fontWeight: 600, margin: 0, whiteSpace: 'nowrap' }}>
           {PAGE_TITLES[currentPage] || 'Dashboard'}
         </h2>
       </div>
 
       {/* Search */}
       <div 
-        className="search-wrap" 
-        style={{ width: 260, cursor: 'text' }}
+        className="search-wrap topbar-search" 
+        style={{
+          flex: 1,
+          maxWidth: 480,
+          minWidth: 260,
+          height: 38,
+          padding: '0 14px 0 38px',
+          borderRadius: 10,
+          border: '1px solid var(--border)',
+          background: 'var(--bg)',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          position: 'relative',
+          transition: 'all 200ms ease',
+        }}
         onClick={() => setSearchOpen(true)}
       >
-        <Search size={15} />
-        <div style={{ flex: 1, fontSize: '0.8rem', color: 'var(--text-muted)', userSelect: 'none' }}>
+        <Search size={15} style={{ position: 'absolute', left: 12, color: 'var(--text-muted)', pointerEvents: 'none', flexShrink: 0 }} />
+        <div style={{ flex: 1, fontSize: '0.8rem', color: 'var(--text-muted)', userSelect: 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           Search global...
         </div>
-        <kbd style={{ padding: '2px 5px', borderRadius: 4, background: 'var(--border-light)', border: '1px solid var(--border)', fontSize: '0.65rem', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>
+        <kbd style={{ padding: '2px 6px', borderRadius: 4, background: 'var(--border-light)', border: '1px solid var(--border)', fontSize: '0.65rem', fontFamily: 'monospace', color: 'var(--text-secondary)', flexShrink: 0, marginLeft: 8 }}>
           Ctrl+K
         </kbd>
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto', flexShrink: 0 }}>
         <button
           className="btn btn-ghost btn-icon"
           onClick={toggleDarkMode}
-          style={{ position: 'relative' }}
+          style={{ position: 'relative', flexShrink: 0 }}
           title={darkMode ? 'Light mode' : 'Dark mode'}
         >
           {darkMode ? <Sun size={18} /> : <Moon size={18} />}
@@ -97,7 +111,7 @@ export default function Topbar({ currentPage, onNavigate }: TopbarProps) {
         <button
           className="btn btn-ghost btn-icon"
           onClick={() => onNavigate('notifications')}
-          style={{ position: 'relative' }}
+          style={{ position: 'relative', flexShrink: 0 }}
         >
           <Bell size={18} />
           {unread > 0 && (
@@ -122,31 +136,34 @@ export default function Topbar({ currentPage, onNavigate }: TopbarProps) {
         </button>
 
         {/* User menu */}
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative', flexShrink: 0 }}>
           <button
+            className="topbar-profile-btn"
             onClick={() => setShowUserMenu(v => !v)}
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
-              padding: '6px 10px',
+              gap: 10,
+              padding: '6px 14px 6px 10px',
               borderRadius: 10,
               border: '1px solid var(--border)',
               background: 'var(--bg)',
               cursor: 'pointer',
               transition: 'all 200ms',
+              flexShrink: 0,
+              overflow: 'visible',
             }}
           >
-            <div className="avatar avatar-sm">{currentUser?.avatar}</div>
-            <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+            <div className="avatar avatar-sm" style={{ flexShrink: 0 }}>{currentUser?.avatar}</div>
+            <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
                 {currentUser?.name.split(' ')[0]}
               </span>
-              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                 {currentUser?.role === 'admin' ? 'Admin' : currentUser?.role === 'hr_manager' ? 'HR Manager' : currentUser?.role === 'manager' ? 'Manager' : 'Employee'}
               </span>
             </div>
-            <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />
+            <ChevronDown size={14} style={{ color: 'var(--text-muted)', flexShrink: 0, marginLeft: 2 }} />
           </button>
 
           {showUserMenu && (

@@ -59,6 +59,28 @@ export interface LeaveRequest {
   appliedOn: string;
   approvedBy?: string;
   comments?: string;
+  employee?: {
+    id: string;
+    name: string;
+    avatar?: string;
+    department?: string;
+  };
+}
+
+export interface Expense {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  employeeAvatar: string;
+  category: string;
+  amount: number;
+  description: string;
+  date: string;
+  status: 'pending' | 'approved' | 'rejected';
+  receipt?: string;
+  submittedOn: string;
+  approvedBy?: string;
+  comments?: string;
 }
 
 export interface AttendanceRecord {

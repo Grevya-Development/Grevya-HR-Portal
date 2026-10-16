@@ -8,6 +8,8 @@ import {
   PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
 } from 'recharts';
 import { Bell, Download, FileText, Zap, Trophy, Award, Medal, User, Mail, Phone, MapPin, Calendar, Edit2, Check, X, Shield } from 'lucide-react';
+import { downloadPayslipPdf } from '../utils/payslipPdf';
+
 
 // ===================== REPORTS =====================
 export function ReportsPage() {
@@ -358,20 +360,18 @@ export function AIPage() {
 
 // ===================== PAYSLIPS =====================
 export function PayslipsPage() {
+  const { currentUser } = useStore();
   const [selected, setSelected] = useState(PAYSLIPS[0]);
 
   const downloadPayslip = (payslip: typeof PAYSLIPS[0]) => {
-    const content = `Payslip for ${payslip.month} ${payslip.year}\n\nNet Salary: ₹${payslip.netSalary.toLocaleString()}\nBasic: ₹${payslip.basicSalary.toLocaleString()}\nHRA: ₹${payslip.hra.toLocaleString()}\nConveyance: ₹${payslip.conveyance.toLocaleString()}\nMedical: ₹${payslip.medical.toLocaleString()}\nBonus: ₹${payslip.bonus.toLocaleString()}\nPF: -₹${payslip.pf.toLocaleString()}\nTax: -₹${payslip.tax.toLocaleString()}`; // Simplified content
-    const blob = new Blob([content], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Payslip_${payslip.month}_${payslip.year}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    downloadPayslipPdf(payslip, {
+      name: currentUser?.name || 'Kiran Patel',
+      code: 'EMP001',
+      designation: currentUser?.position || 'Backend Developer',
+      department: currentUser?.department || 'Engineering',
+    });
   };
+
 
   return (
     <div className="animate-fade">
