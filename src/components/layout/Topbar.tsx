@@ -160,7 +160,7 @@ export default function Topbar({ currentPage, onNavigate }: TopbarProps) {
                 {currentUser?.name.split(' ')[0]}
               </span>
               <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                {currentUser?.role === 'admin' ? 'Admin' : currentUser?.role === 'hr_manager' ? 'HR Manager' : currentUser?.role === 'manager' ? 'Manager' : 'Employee'}
+                {currentUser?.role === 'super_admin' ? 'Super Admin' : currentUser?.role === 'admin' ? 'Admin' : currentUser?.role === 'hr_manager' ? 'HR Manager' : currentUser?.role === 'manager' ? 'Manager' : 'Employee'}
               </span>
             </div>
             <ChevronDown size={14} style={{ color: 'var(--text-muted)', flexShrink: 0, marginLeft: 2 }} />

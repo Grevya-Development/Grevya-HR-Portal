@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useStore } from '../services/store';
-import { PERFORMANCE_DATA } from '../data/mockData';
 import {
   RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
