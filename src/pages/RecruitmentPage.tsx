@@ -58,24 +58,57 @@ const STAGE_NEXT: Record<string, Candidate['stage']> = {
   applied: 'screening', screening: 'interview', interview: 'offer', offer: 'hired',
 };
 
-const getHeaders = () => ({
-  'Content-Type': 'application/json',
-  'Authorization': `Bearer ${localStorage.getItem('token')}`
-});
+import { supabase } from '../lib/supabase';
 
 export default function RecruitmentPage() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [jobs, setJobs] = useState<JobOpening[]>([]);
 
+  const loadData = async () => {
+    try {
+      const [{ data: cData }, { data: jData }] = await Promise.all([
+        supabase.from('candidates').select('*').order('created_at', { ascending: false }),
+        supabase.from('job_postings').select('*').order('created_at', { ascending: false }),
+      ]);
+      if (cData && cData.length > 0) {
+        setCandidates(cData.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          email: c.email,
+          phone: c.phone || '',
+          position: c.notes?.split(' (')[0] || 'Software Engineer',
+          department: c.notes?.includes('(') ? c.notes.split('(')[1].replace(')', '') : 'Engineering',
+          stage: c.stage,
+          appliedDate: c.applied_at || (c.created_at ? c.created_at.split('T')[0] : '2024-03-01'),
+          avatar: c.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase(),
+          score: c.rating || undefined,
+          note: c.notes || undefined,
+        })));
+      } else {
+        setCandidates(INITIAL_CANDIDATES);
+      }
+      if (jData && jData.length > 0) {
+        setJobs(jData.map((j: any) => ({
+          id: j.id,
+          title: j.title,
+          department: 'Engineering',
+          type: (j.type as any) || 'full_time',
+          location: j.location || 'Remote',
+          openings: j.openings || 1,
+          posted: j.posted_date || (j.created_at ? j.created_at.split('T')[0] : '2024-03-01'),
+          status: j.status,
+        })));
+      } else {
+        setJobs(INITIAL_JOBS);
+      }
+    } catch {
+      setCandidates(INITIAL_CANDIDATES);
+      setJobs(INITIAL_JOBS);
+    }
+  };
+
   React.useEffect(() => {
-    fetch('http://localhost:3001/api/candidates', { headers: getHeaders() })
-      .then(r => r.json())
-      .then(d => { if (Array.isArray(d)) setCandidates(d); })
-      .catch(() => {});
-    fetch('http://localhost:3001/api/jobs', { headers: getHeaders() })
-      .then(r => r.json())
-      .then(d => { if (Array.isArray(d)) setJobs(d); })
-      .catch(() => {});
+    loadData();
   }, []);
   const [view, setView] = useState<'pipeline' | 'jobs'>('pipeline');
   const [search, setSearch] = useState('');
@@ -98,10 +131,11 @@ export default function RecruitmentPage() {
     if (!c) return;
     const next = STAGE_NEXT[c.stage];
     if (!next) return;
-    await fetch(`http://localhost:3001/api/candidates/${id}`, {
-      method: 'PUT', headers: getHeaders(),
-      body: JSON.stringify({ ...c, stage: next })
-    });
+    const { error } = await supabase.from('candidates').update({ stage: next }).eq('id', id);
+    if (error) {
+      toast.error('Failed to update stage in database: ' + error.message);
+      return;
+    }
     setCandidates(prev => prev.map(c => c.id === id ? { ...c, stage: next } : c));
     toast.success(`${c.name} advanced to ${next.charAt(0).toUpperCase() + next.slice(1)}!`);
   };
@@ -109,49 +143,79 @@ export default function RecruitmentPage() {
   const rejectCandidate = async (id: string) => {
     const c = candidates.find(c => c.id === id);
     if (!c) return;
-    await fetch(`http://localhost:3001/api/candidates/${id}`, {
-      method: 'PUT', headers: getHeaders(),
-      body: JSON.stringify({ ...c, stage: 'rejected' })
-    });
+    const { error } = await supabase.from('candidates').update({ stage: 'rejected' }).eq('id', id);
+    if (error) {
+      toast.error('Failed to reject candidate: ' + error.message);
+      return;
+    }
     setCandidates(prev => prev.map(c => c.id === id ? { ...c, stage: 'rejected' } : c));
     toast.warning(`${c.name}'s application rejected.`);
   };
 
   const addJob = async () => {
     if (!jobForm.title || !jobForm.location) return;
-    const newJob: Partial<JobOpening> = {
-      ...jobForm,
-      posted: new Date().toISOString().split('T')[0],
-      status: 'active',
+    const newJob = {
+      title: jobForm.title.trim(),
+      type: jobForm.type,
+      location: jobForm.location.trim(),
+      openings: Number(jobForm.openings) || 1,
+      status: 'active' as const,
+      posted_date: new Date().toISOString().split('T')[0],
     };
-    const res = await fetch(`http://localhost:3001/api/jobs`, {
-      method: 'POST', headers: getHeaders(),
-      body: JSON.stringify(newJob)
-    });
-    const savedJob = await res.json();
-    setJobs(prev => [savedJob, ...prev]);
+    const { data, error } = await supabase.from('job_postings').insert(newJob).select().single();
+    if (error) {
+      toast.error('Failed to post job: ' + error.message);
+      return;
+    }
+    if (data) {
+      setJobs(prev => [{
+        id: data.id,
+        title: data.title,
+        department: jobForm.department,
+        type: data.type as any,
+        location: data.location || 'Remote',
+        openings: data.openings,
+        posted: data.posted_date || new Date().toISOString().split('T')[0],
+        status: data.status,
+      }, ...prev]);
+    }
     setAddJobModal(false);
     setJobForm({ title: '', department: 'Engineering', type: 'full_time', location: '', openings: 1 });
-    toast.success('Job opening posted!', savedJob.title);
+    toast.success('Job opening posted!', newJob.title);
   };
 
   const addCandidate = async () => {
     if (!candForm.name || !candForm.email || !candForm.position) return;
     const avatar = candForm.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-    const nc: Partial<Candidate> = {
-      ...candForm, avatar,
-      stage: 'applied',
-      appliedDate: new Date().toISOString().split('T')[0],
+    const payload = {
+      name: candForm.name.trim(),
+      email: candForm.email.trim(),
+      phone: candForm.phone.trim() || null,
+      stage: 'applied' as const,
+      notes: `${candForm.position} (${candForm.department})`,
+      applied_at: new Date().toISOString().split('T')[0],
     };
-    const res = await fetch(`http://localhost:3001/api/candidates`, {
-      method: 'POST', headers: getHeaders(),
-      body: JSON.stringify(nc)
-    });
-    const savedCand = await res.json();
-    setCandidates(prev => [savedCand, ...prev]);
+    const { data, error } = await supabase.from('candidates').insert(payload).select().single();
+    if (error) {
+      toast.error('Failed to add candidate: ' + error.message);
+      return;
+    }
+    if (data) {
+      setCandidates(prev => [{
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        phone: data.phone || '',
+        position: candForm.position,
+        department: candForm.department,
+        stage: 'applied',
+        appliedDate: data.applied_at || new Date().toISOString().split('T')[0],
+        avatar,
+      }, ...prev]);
+    }
     setAddCandModal(false);
     setCandForm({ name: '', email: '', phone: '', position: '', department: 'Engineering' });
-    toast.success('Candidate added!', `${savedCand.name} added to pipeline.`);
+    toast.success('Candidate added!', `${payload.name} added to pipeline.`);
   };
 
   const stats = {
@@ -299,20 +363,14 @@ export default function RecruitmentPage() {
                 <button className="btn btn-secondary btn-sm"
                   onClick={async () => {
                     const nextStatus = job.status === 'active' ? 'paused' : 'active';
-                    await fetch(`http://localhost:3001/api/jobs/${job.id}`, {
-                      method: 'PUT', headers: getHeaders(),
-                      body: JSON.stringify({ ...job, status: nextStatus })
-                    });
+                    await supabase.from('job_postings').update({ status: nextStatus }).eq('id', job.id);
                     setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: nextStatus } : j));
                   }}>
                   {job.status === 'active' ? 'Pause' : 'Activate'}
                 </button>
                 <button className="btn btn-danger btn-sm"
                   onClick={async () => { 
-                    await fetch(`http://localhost:3001/api/jobs/${job.id}`, {
-                      method: 'PUT', headers: getHeaders(),
-                      body: JSON.stringify({ ...job, status: 'closed' })
-                    });
+                    await supabase.from('job_postings').update({ status: 'closed' }).eq('id', job.id);
                     setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: 'closed' } : j)); 
                     toast.info('Job closed', job.title); 
                   }}>

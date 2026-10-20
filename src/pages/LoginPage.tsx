@@ -1,44 +1,99 @@
 import React, { useState } from 'react';
 import { useStore } from '../services/store';
-import { Eye, EyeOff, AlertCircle, ArrowRight, ArrowLeft, Home } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, ArrowRight, ArrowLeft, CheckCircle2, UserPlus, LogIn } from 'lucide-react';
 import brandLogo from '../brandimage/icon-192.png';
-
-const DEMO_ACCOUNTS = [
-  { role: 'Admin', email: 'admin@grevya.com', password: 'admin123', color: '#0f766e', bg: '#ecfdf5' },
-  { role: 'HR Manager', email: 'hr@grevya.com', password: 'hr123', color: '#22c55e', bg: '#f0fdf4' },
-  { role: 'Manager', email: 'manager@grevya.com', password: 'mgr123', color: '#3b82f6', bg: '#eff6ff' },
-  { role: 'Employee', email: 'employee@grevya.com', password: 'emp123', color: '#8b5cf6', bg: '#f5f3ff' },
-];
+import { UserRole } from '../types';
+import { isPermittedGrevyaEmail, EMAIL_POLICY_MESSAGE } from '../utils/emailValidation';
 
 interface LoginPageProps {
   onBack?: () => void;
 }
 
 export default function LoginPage({ onBack }: LoginPageProps) {
-  const { login } = useStore();
+  const { login, register, authError, clearAuthError, departments, fetchDepartments } = useStore();
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  
+  // Login form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Register form state
+  const [regName, setRegName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [regRole, setRegRole] = useState<'employee' | 'manager'>('employee');
+  const [regPosition, setRegPosition] = useState('Developer');
+  const [regDepartmentId, setRegDepartmentId] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regSuccess, setRegSuccess] = useState('');
+
+  React.useEffect(() => {
+    if (departments.length === 0) {
+      fetchDepartments();
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (authError) {
+      setError(authError);
+    }
+  }, [authError]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    clearAuthError();
     setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    const ok = await login(email, password);
-    if (!ok) setError('Invalid credentials. Try a demo account below.');
+    const res = await login(email, password);
+    if (!res.success) {
+      setError(res.error || 'Invalid credentials. Please check your email and password.');
+    }
     setLoading(false);
   };
 
-  const quickLogin = async (acc: typeof DEMO_ACCOUNTS[0]) => {
-    setEmail(acc.email);
-    setPassword(acc.password);
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError('');
+    setRegSuccess('');
+
+    if (!isPermittedGrevyaEmail(regEmail)) {
+      setError(EMAIL_POLICY_MESSAGE);
+      return;
+    }
+    if (regPassword.length < 6) {
+      setError('Password must contain at least 6 characters.');
+      return;
+    }
+    if (regPassword !== regConfirmPassword) {
+      setError('Passwords do not match. Please re-enter your password.');
+      return;
+    }
+
     setLoading(true);
-    const ok = await login(acc.email, acc.password);
-    if (!ok) setError('Demo login failed. Please try again.');
+    const res = await register({
+      name: regName,
+      email: regEmail,
+      password: regPassword,
+      role: regRole as UserRole,
+      position: regPosition,
+      departmentId: regDepartmentId || undefined,
+      phone: regPhone,
+    });
+
+    if (!res.success) {
+      setError(res.error || 'Registration failed. Please try again.');
+    } else {
+      setRegSuccess('Your account registration has been submitted successfully! Your account is pending HR approval. You will be able to log in once an administrator approves your profile.');
+      setRegName('');
+      setRegEmail('');
+      setRegPassword('');
+      setRegConfirmPassword('');
+      setRegPhone('');
+    }
     setLoading(false);
   };
 
@@ -138,106 +193,254 @@ export default function LoginPage({ onBack }: LoginPageProps) {
         </div>
 
         {/* Right panel - Form */}
-        <div style={{ background: '#ffffff', padding: '56px 48px' }}>
-          <div style={{ marginBottom: 36 }}>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>Sign in</h2>
-            <p style={{ color: '#64748b', fontSize: '0.875rem' }}>Access your HR portal dashboard</p>
+        <div style={{ background: '#ffffff', padding: '48px 44px', display: 'flex', flexDirection: 'column', maxHeight: '90vh', overflowY: 'auto' }}>
+          {/* Mode Switch Tabs */}
+          <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 12, padding: 4, marginBottom: 28 }}>
+            <button
+              type="button"
+              onClick={() => { setMode('login'); setError(''); setRegSuccess(''); }}
+              style={{
+                flex: 1,
+                padding: '8px 16px',
+                borderRadius: 8,
+                border: 'none',
+                background: mode === 'login' ? '#ffffff' : 'transparent',
+                color: mode === 'login' ? '#0f172a' : '#64748b',
+                fontWeight: mode === 'login' ? 600 : 500,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                boxShadow: mode === 'login' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+                transition: 'all 150ms',
+              }}
+            >
+              <LogIn size={14} /> Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode('register'); setError(''); setRegSuccess(''); }}
+              style={{
+                flex: 1,
+                padding: '8px 16px',
+                borderRadius: 8,
+                border: 'none',
+                background: mode === 'register' ? '#ffffff' : 'transparent',
+                color: mode === 'register' ? '#0f172a' : '#64748b',
+                fontWeight: mode === 'register' ? 600 : 500,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                boxShadow: mode === 'register' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+                transition: 'all 150ms',
+              }}
+            >
+              <UserPlus size={14} /> Register Account
+            </button>
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-            {error && (
-              <div className="alert alert-error">
-                <AlertCircle size={16} />
-                <span>{error}</span>
-              </div>
-            )}
+          <div style={{ marginBottom: 24 }}>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>
+              {mode === 'login' ? 'Welcome back' : 'Create your employee profile'}
+            </h2>
+            <p style={{ color: '#64748b', fontSize: '0.825rem' }}>
+              {mode === 'login' ? 'Access your Grevya HR Portal dashboard' : 'Join Grevya HR Portal. New accounts require HR review.'}
+            </p>
+          </div>
 
-            <div className="form-group">
-              <label className="form-label">Email Address</label>
-              <input
-                className="input"
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="you@grevya.com"
-                required
-              />
+          {error && (
+            <div className="alert alert-error" style={{ marginBottom: 16 }}>
+              <AlertCircle size={16} />
+              <span style={{ fontSize: '0.82rem' }}>{error}</span>
             </div>
+          )}
 
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <div style={{ position: 'relative' }}>
+          {regSuccess && (
+            <div className="alert alert-success" style={{ marginBottom: 16 }}>
+              <CheckCircle2 size={16} />
+              <span style={{ fontSize: '0.82rem' }}>{regSuccess}</span>
+            </div>
+          )}
+
+          {mode === 'login' ? (
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: '0.8rem' }}>Email Address</label>
                 <input
                   className="input"
-                  type={showPw ? 'text' : 'password'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="you@grevya.com"
                   required
-                  style={{ paddingRight: 44 }}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPw(v => !v)}
-                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
-                >
-                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
               </div>
-            </div>
 
-            <button
-              type="submit"
-              className="btn btn-primary btn-lg"
-              disabled={loading}
-              style={{ marginTop: 8, justifyContent: 'center', fontSize: '0.9rem' }}
-            >
-              {loading ? (
-                <>
-                  <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
-                  Signing in...
-                </>
-              ) : (
-                <>Sign In <ArrowRight size={16} /></>
-              )}
-            </button>
-          </form>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: '0.8rem' }}>Password</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    className="input"
+                    type={showPw ? 'text' : 'password'}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    style={{ paddingRight: 44 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(v => !v)}
+                    style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+                  >
+                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
 
-          {/* Demo accounts */}
-          <div style={{ marginTop: 32 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
-              <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 500 }}>DEMO ACCOUNTS</span>
-              <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {DEMO_ACCOUNTS.map(acc => (
-                <button
-                  key={acc.role}
-                  onClick={() => quickLogin(acc)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '10px 14px',
-                    borderRadius: 10,
-                    border: `1px solid ${acc.color}30`,
-                    background: acc.bg,
-                    cursor: 'pointer',
-                    transition: 'all 200ms',
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 12px ${acc.color}20`; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '0.8rem', color: acc.color }}>{acc.role}</div>
-                    <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{acc.email}</div>
-                  </div>
-                  <ArrowRight size={14} color={acc.color} />
-                </button>
-              ))}
-            </div>
-          </div>
+              <button
+                type="submit"
+                className="btn btn-primary btn-lg"
+                disabled={loading}
+                style={{ marginTop: 8, justifyContent: 'center', fontSize: '0.9rem' }}
+              >
+                {loading ? (
+                  <>
+                    <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
+                    Signing in...
+                  </>
+                ) : (
+                  <>Sign In <ArrowRight size={16} /></>
+                )}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: '0.8rem' }}>Full Name *</label>
+                <input
+                  className="input"
+                  type="text"
+                  value={regName}
+                  onChange={e => setRegName(e.target.value)}
+                  placeholder="e.g. Rohith Kumar"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: '0.8rem' }}>Official Email Address (@grevya.com or *.grevya@gmail.com) *</label>
+                <input
+                  className="input"
+                  type="email"
+                  value={regEmail}
+                  onChange={e => setRegEmail(e.target.value)}
+                  placeholder="name@grevya.com or name.grevya@gmail.com"
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Account Role *</label>
+                  <select
+                    className="input"
+                    value={regRole}
+                    onChange={e => setRegRole(e.target.value as any)}
+                  >
+                    <option value="employee">Employee</option>
+                    <option value="manager">Manager / Team Lead</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Department</label>
+                  <select
+                    className="input"
+                    value={regDepartmentId}
+                    onChange={e => setRegDepartmentId(e.target.value)}
+                  >
+                    <option value="">Select department...</option>
+                    {departments.map(d => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Job Title / Position *</label>
+                  <input
+                    className="input"
+                    type="text"
+                    value={regPosition}
+                    onChange={e => setRegPosition(e.target.value)}
+                    placeholder="e.g. Developer, QA Engineer"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Phone Number</label>
+                  <input
+                    className="input"
+                    type="tel"
+                    value={regPhone}
+                    onChange={e => setRegPhone(e.target.value)}
+                    placeholder="+91 98765 43210"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Password *</label>
+                  <input
+                    className="input"
+                    type="password"
+                    value={regPassword}
+                    onChange={e => setRegPassword(e.target.value)}
+                    placeholder="Min 6 characters"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Confirm Password *</label>
+                  <input
+                    className="input"
+                    type="password"
+                    value={regConfirmPassword}
+                    onChange={e => setRegConfirmPassword(e.target.value)}
+                    placeholder="Repeat password"
+                    required
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-primary btn-lg"
+                disabled={loading}
+                style={{ marginTop: 6, justifyContent: 'center', fontSize: '0.9rem' }}
+              >
+                {loading ? (
+                  <>
+                    <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
+                    Submitting registration...
+                  </>
+                ) : (
+                  <>Create Account <ArrowRight size={16} /></>
+                )}
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </div>

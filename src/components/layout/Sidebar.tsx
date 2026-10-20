@@ -5,7 +5,7 @@ import brandLogo from '../../brandimage/icon-192.png';
 import {
   LayoutDashboard, Users, Calendar, Clock, BarChart3,
   LogOut, ChevronLeft, ChevronRight, Bell, User, Trophy, Zap,
-  FileText, Briefcase, GitBranch, ShieldCheck
+  FileText, Briefcase, GitBranch, ShieldCheck, Building2
 } from 'lucide-react';
 
 interface NavItem {
@@ -20,19 +20,25 @@ const NAV_SECTIONS = [
   {
     label: 'Admin',
     items: [
-      { label: 'Dashboard',       icon: <LayoutDashboard size={18} />, page: 'dashboard',    roles: ['admin'] as UserRole[] },
-      { label: 'HR Managers',     icon: <ShieldCheck size={18} />,     page: 'hr-managers',  roles: ['admin'] as UserRole[] },
-      { label: 'Employees',       icon: <Users size={18} />,           page: 'employees',    roles: ['admin'] as UserRole[] },
-      { label: 'Leave Requests',  icon: <Calendar size={18} />,        page: 'leave',        roles: ['admin'] as UserRole[] },
-      { label: 'Attendance',      icon: <Clock size={18} />,           page: 'attendance',   roles: ['admin'] as UserRole[] },
-      { label: 'Reports',         icon: <FileText size={18} />,        page: 'reports',      roles: ['admin'] as UserRole[] },
+      { label: 'Dashboard',       icon: <LayoutDashboard size={18} />, page: 'dashboard',    roles: ['admin', 'super_admin'] as UserRole[] },
+      { label: 'HR Managers',     icon: <ShieldCheck size={18} />,     page: 'hr-managers',  roles: ['admin', 'super_admin'] as UserRole[] },
+      { label: 'Employees',       icon: <Users size={18} />,           page: 'employees',    roles: ['admin', 'super_admin'] as UserRole[] },
+      { label: 'Departments',     icon: <Building2 size={18} />,       page: 'departments',  roles: ['admin', 'super_admin'] as UserRole[] },
+      { label: 'Leave Requests',  icon: <Calendar size={18} />,        page: 'leave',        roles: ['admin', 'super_admin'] as UserRole[] },
+      { label: 'Attendance',      icon: <Clock size={18} />,           page: 'attendance',   roles: ['admin', 'super_admin'] as UserRole[] },
+      { label: 'Expenses',        icon: <FileText size={18} />,        page: 'expenses',     roles: ['admin', 'super_admin'] as UserRole[] },
+      { label: 'Payroll',         icon: <FileText size={18} />,        page: 'payslips',     roles: ['admin', 'super_admin'] as UserRole[] },
+      { label: 'Reports',         icon: <FileText size={18} />,        page: 'reports',      roles: ['admin', 'super_admin'] as UserRole[] },
     ],
   },
   {
     label: 'Main',
     items: [
       { label: 'Dashboard',       icon: <LayoutDashboard size={18} />, page: 'dashboard',   roles: ['hr_manager', 'manager', 'employee'] as UserRole[] },
+      { label: 'Developer Board', icon: <GitBranch size={18} />,       page: 'developer-dashboard', roles: ['employee', 'manager', 'admin', 'super_admin'] as UserRole[] },
+      { label: 'Team Lead Board', icon: <Users size={18} />,           page: 'teamlead-dashboard',  roles: ['manager', 'admin', 'super_admin'] as UserRole[] },
       { label: 'Employees',       icon: <Users size={18} />,           page: 'employees',   roles: ['hr_manager', 'manager'] as UserRole[] },
+      { label: 'Departments',     icon: <Building2 size={18} />,       page: 'departments', roles: ['hr_manager'] as UserRole[] },
       { label: 'Org Chart',       icon: <GitBranch size={18} />,       page: 'orgchart',    roles: ['hr_manager', 'manager', 'employee'] as UserRole[] },
       { label: 'Recruitment',     icon: <Briefcase size={18} />,       page: 'recruitment', roles: ['hr_manager', 'manager'] as UserRole[] },
       { label: 'Onboarding',      icon: <Users size={18} />,           page: 'onboarding',  roles: ['hr_manager', 'manager'] as UserRole[] },
@@ -47,7 +53,7 @@ const NAV_SECTIONS = [
       { label: 'Expenses',         icon: <FileText size={18} />,  page: 'expenses',    roles: ['hr_manager', 'manager', 'employee'] as UserRole[] },
       { label: 'Calendar',         icon: <Calendar size={18} />,  page: 'calendar',    roles: ['hr_manager', 'manager', 'employee'] as UserRole[] },
       { label: 'Reports',          icon: <FileText size={18} />,  page: 'reports',     roles: ['hr_manager', 'manager'] as UserRole[] },
-      { label: 'Payslips',         icon: <FileText size={18} />,  page: 'payslips',    roles: ['employee'] as UserRole[] },
+      { label: 'Payroll & Payslips', icon: <FileText size={18} />, page: 'payslips',   roles: ['admin', 'super_admin', 'hr_manager', 'manager', 'employee'] as UserRole[] },
     ],
   },
   {
@@ -56,7 +62,7 @@ const NAV_SECTIONS = [
       { label: 'Leaderboard',   icon: <Trophy size={18} />, page: 'leaderboard',   roles: ['hr_manager', 'manager', 'employee'] as UserRole[] },
       { label: 'AI Insights',   icon: <Zap size={18} />,    page: 'ai',            roles: ['hr_manager', 'manager'] as UserRole[] },
       { label: 'Notifications', icon: <Bell size={18} />,   page: 'notifications', roles: ['hr_manager', 'manager', 'employee'] as UserRole[] },
-      { label: 'Profile',       icon: <User size={18} />,   page: 'profile',       roles: ['hr_manager', 'manager', 'employee'] as UserRole[] },
+      { label: 'Profile',       icon: <User size={18} />,   page: 'profile',       roles: ['admin', 'super_admin', 'hr_manager', 'manager', 'employee'] as UserRole[] },
     ],
   },
 ];
@@ -77,6 +83,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const filtered = NAV_ITEMS.filter(item => item.roles.includes(currentUser.role));
 
   const roleLabel = {
+    super_admin: 'Super Admin',
     admin: 'Admin',
     hr_manager: 'HR Manager',
     manager: 'Manager',

@@ -1,8 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../services/store';
 import { Expense } from '../types';
-import { Plus, X, Receipt, CheckCircle2, XCircle, Clock, Upload, Download } from 'lucide-react';
+import { Plus, X, Receipt, CheckCircle2, XCircle, Clock, Upload, Download, Eye } from 'lucide-react';
 import { toast } from '../components/ui/Toast';
+import { supabase } from '../lib/supabase';
 
 const CATEGORIES = ['Travel', 'Food & Entertainment', 'Office Supplies', 'Training', 'Medical', 'Software', 'Other'];
 
@@ -51,7 +52,7 @@ function isValidReceipt(val: string): boolean {
 }
 
 export default function ExpensesPage() {
-  const { currentUser, expenses, addExpense, approveExpense, rejectExpense } = useStore();
+  const { currentUser, expenses, fetchExpenses, addExpense, approveExpense, rejectExpense } = useStore();
   const isHRorManager = currentUser?.role !== 'employee';
   const isEmployee = currentUser?.role === 'employee';
   const [tab, setTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
@@ -60,19 +61,15 @@ export default function ExpensesPage() {
   const [comment, setComment] = useState('');
   const [form, setForm] = useState({ category: 'Travel', amount: '', description: '', date: '', receipt: '' });
   const [receiptError, setReceiptError] = useState('');
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Current claims list for the active user context (employees see their claims, HR/managers see all claims)
-  const claims = expenses.filter(e => {
-    if (!isEmployee) return true;
-    return (
-      e.employeeId === currentUser?.id ||
-      e.employeeId === 'e1' ||
-      e.employeeId === 'u3' ||
-      (currentUser?.name && e.employeeName.toLowerCase() === currentUser.name.toLowerCase()) ||
-      (!currentUser && e.employeeId === 'e1')
-    );
-  });
+  useEffect(() => {
+    fetchExpenses();
+  }, [fetchExpenses]);
+
+  // Claims list: loaded live from Supabase, already RLS-scoped
+  const claims = expenses;
 
   const filtered = claims.filter(e => tab === 'all' || e.status === tab);
 
@@ -107,15 +104,53 @@ export default function ExpensesPage() {
     return true;
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const sanitizedName = file.name.replace(/\s+/g, '_');
-      const generatedPath = `/receipts/${sanitizedName}`;
-      setForm(f => ({ ...f, receipt: generatedPath }));
-      setReceiptError('');
-      toast.success('Receipt selected', file.name);
+    if (file && currentUser) {
+      setUploadingReceipt(true);
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const filePath = `${currentUser.id}/${Date.now()}_${sanitizedName}`;
+      try {
+        const { error: uploadError } = await supabase.storage
+          .from('receipts')
+          .upload(filePath, file, { upsert: true });
+
+        if (uploadError) {
+          console.warn('Storage upload error, using path reference:', uploadError.message);
+          setForm(f => ({ ...f, receipt: `/receipts/${sanitizedName}` }));
+        } else {
+          setForm(f => ({ ...f, receipt: filePath }));
+        }
+        setReceiptError('');
+        toast.success('Receipt attached', file.name);
+      } catch (err: any) {
+        console.error('File upload exception:', err);
+        setForm(f => ({ ...f, receipt: `/receipts/${sanitizedName}` }));
+        setReceiptError('');
+      } finally {
+        setUploadingReceipt(false);
+      }
     }
+  };
+
+  const handleViewReceipt = async (receiptPath: string) => {
+    if (!receiptPath) return;
+    if (receiptPath.startsWith('http://') || receiptPath.startsWith('https://')) {
+      window.open(receiptPath, '_blank');
+      return;
+    }
+    if (receiptPath.includes('/') && !receiptPath.startsWith('/receipts/')) {
+      try {
+        const { data, error } = await supabase.storage.from('receipts').createSignedUrl(receiptPath, 3600);
+        if (!error && data?.signedUrl) {
+          window.open(data.signedUrl, '_blank');
+          return;
+        }
+      } catch (err) {
+        console.warn('Error fetching signed url:', err);
+      }
+    }
+    toast.info('Receipt Document', receiptPath);
   };
 
   const handleSubmit = async () => {
@@ -137,39 +172,46 @@ export default function ExpensesPage() {
       return;
     }
 
-    const currentEmpId = currentUser?.id || 'e1';
-    await addExpense({
-      employeeId: currentEmpId,
-      employeeName: currentUser?.name || 'Kiran Patel',
-      employeeAvatar: currentUser?.avatar || 'KP',
-      category: form.category,
-      amount: Number(form.amount),
-      description: form.description.trim(),
-      date: form.date,
-      receipt: trimmedReceipt,
-    });
+    try {
+      await addExpense({
+        employeeId: currentUser?.id || '',
+        employeeName: currentUser?.name || 'Employee',
+        employeeAvatar: currentUser?.avatar || 'EM',
+        category: form.category,
+        amount: Number(form.amount),
+        description: form.description.trim(),
+        date: form.date,
+        receipt: trimmedReceipt,
+      });
 
-    setModal(false);
-    setReceiptError('');
-    setForm({ category: 'Travel', amount: '', description: '', date: '', receipt: '' });
-    if (tab === 'approved' || tab === 'rejected') {
-      setTab('all');
+      setModal(false);
+      setReceiptError('');
+      setForm({ category: 'Travel', amount: '', description: '', date: '', receipt: '' });
+      if (tab === 'approved' || tab === 'rejected') {
+        setTab('all');
+      }
+      toast.success('Expense submitted!', `₹${Number(form.amount).toLocaleString()} claim sent for approval.`);
+    } catch (err: any) {
+      toast.error('Submission Failed', err.message || 'Failed to submit expense claim.');
     }
-    toast.success('Expense submitted!', `₹${Number(form.amount).toLocaleString()} claim sent for approval.`);
   };
 
   const handleAction = async () => {
     if (!actionModal) return;
     const { exp, type } = actionModal;
-    if (type === 'approve') {
-      await approveExpense(exp.id, comment);
-      toast.success('Expense approved!', `₹${exp.amount.toLocaleString()} claim for ${exp.employeeName} approved.`);
-    } else {
-      await rejectExpense(exp.id, comment);
-      toast.error('Expense rejected', `${exp.employeeName}'s ₹${exp.amount.toLocaleString()} claim rejected.`);
+    try {
+      if (type === 'approve') {
+        await approveExpense(exp.id, comment);
+        toast.success('Expense approved!', `₹${exp.amount.toLocaleString()} claim for ${exp.employeeName} approved.`);
+      } else {
+        await rejectExpense(exp.id, comment);
+        toast.error('Expense rejected', `${exp.employeeName}'s ₹${exp.amount.toLocaleString()} claim rejected.`);
+      }
+      setActionModal(null);
+      setComment('');
+    } catch (err: any) {
+      toast.error('Decision Failed', err.message || 'Failed to process expense claim.');
     }
-    setActionModal(null);
-    setComment('');
   };
 
   const statusBadge = (s: string) => s === 'approved' ? 'badge-green' : s === 'rejected' ? 'badge-red' : 'badge-yellow';
@@ -255,6 +297,19 @@ export default function ExpensesPage() {
                   <td style={{ fontSize: '0.8rem', maxWidth: 220 }}>
                     <div className="truncate">{exp.description}</div>
                     {exp.comments && <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 2 }}>Note: {exp.comments}</div>}
+                    {exp.receipt && (
+                      <div style={{ marginTop: 4 }}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '2px 8px', fontSize: '0.68rem', height: 'auto', gap: 4, display: 'inline-flex', alignItems: 'center' }}
+                          onClick={() => handleViewReceipt(exp.receipt!)}
+                          title="View Receipt"
+                        >
+                          <Eye size={11} /> View Receipt
+                        </button>
+                      </div>
+                    )}
                   </td>
                   <td style={{ fontWeight: 700, fontSize: '0.95rem', color: exp.status === 'approved' ? '#22c55e' : exp.status === 'rejected' ? '#dc2626' : 'var(--text-primary)' }}>
                     ₹{exp.amount.toLocaleString()}
@@ -268,10 +323,14 @@ export default function ExpensesPage() {
                   {isHRorManager && (
                     <td>
                       {exp.status === 'pending' && (
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button className="btn btn-primary btn-sm" onClick={() => setActionModal({ exp, type: 'approve' })}><CheckCircle2 size={12} /></button>
-                          <button className="btn btn-danger btn-sm" onClick={() => setActionModal({ exp, type: 'reject' })}><XCircle size={12} /></button>
-                        </div>
+                        exp.employeeId === currentUser?.id ? (
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Own Claim</span>
+                        ) : (
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button className="btn btn-primary btn-sm" title="Approve Claim" onClick={() => setActionModal({ exp, type: 'approve' })}><CheckCircle2 size={12} /></button>
+                            <button className="btn btn-danger btn-sm" title="Reject Claim" onClick={() => setActionModal({ exp, type: 'reject' })}><XCircle size={12} /></button>
+                          </div>
+                        )
                       )}
                     </td>
                   )}

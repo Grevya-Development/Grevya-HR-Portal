@@ -1,12 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../services/store';
+import { supabase } from '../lib/supabase';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { EMPLOYEES } from '../data/mockData';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-const HOLIDAYS = [
+const DEFAULT_HOLIDAYS = [
   { date: '2024-01-26', name: "Republic Day", type: "national" },
   { date: '2024-03-25', name: "Holi", type: "national" },
   { date: '2024-04-14', name: "Dr. Ambedkar Jayanti", type: "national" },
@@ -29,7 +29,7 @@ const BIRTHDAYS = [
   { date: '04-15', name: 'Ananya Singh',  avatar: 'AS' },
 ];
 
-const TEAM_EVENTS = [
+const DEFAULT_TEAM_EVENTS = [
   { date: '2024-03-28', name: 'Q1 All Hands Meeting', type: 'meeting', color: '#3b82f6' },
   { date: '2024-04-05', name: 'Engineering Retrospective', type: 'meeting', color: '#3b82f6' },
   { date: '2024-04-12', name: 'HR Policy Training', type: 'training', color: '#8b5cf6' },
@@ -38,11 +38,40 @@ const TEAM_EVENTS = [
 ];
 
 export default function CalendarPage() {
-  const { leaveRequests } = useStore();
+  const { leaveRequests, holidays: storeHolidays, fetchHolidays } = useStore();
+  const [liveEvents, setLiveEvents] = useState<{ date: string; name: string; type: string; color: string }[]>([]);
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (storeHolidays.length === 0 && fetchHolidays) {
+      fetchHolidays();
+    }
+    supabase.from('calendar_events').select('*').then(({ data }) => {
+      if (data && data.length > 0) {
+        setLiveEvents(data.map((e: any) => ({
+          date: e.start_date,
+          name: e.title,
+          type: e.type || 'meeting',
+          color: e.color || '#3b82f6',
+        })));
+      }
+    });
+  }, []);
+
+  const activeHolidays = useMemo(() => {
+    if (storeHolidays && storeHolidays.length > 0) {
+      return storeHolidays.map(h => ({ date: h.date, name: h.name, type: 'national' }));
+    }
+    return DEFAULT_HOLIDAYS;
+  }, [storeHolidays]);
+
+  const activeEvents = useMemo(() => {
+    if (liveEvents.length > 0) return liveEvents;
+    return DEFAULT_TEAM_EVENTS;
+  }, [liveEvents]);
 
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -55,9 +84,9 @@ export default function CalendarPage() {
     const mmd = mmdd(d);
     return {
       leaves: leaveRequests.filter(r => r.startDate <= ds && r.endDate >= ds),
-      holidays: HOLIDAYS.filter(h => h.date === ds),
+      holidays: activeHolidays.filter(h => h.date === ds),
       birthdays: BIRTHDAYS.filter(b => b.date === mmd),
-      events: TEAM_EVENTS.filter(e => e.date === ds),
+      events: activeEvents.filter(e => e.date === ds),
     };
   };
 
@@ -77,9 +106,9 @@ export default function CalendarPage() {
 
   const selectedEvents = selectedDate ? {
     leaves: leaveRequests.filter(r => r.startDate <= selectedDate && r.endDate >= selectedDate),
-    holidays: HOLIDAYS.filter(h => h.date === selectedDate),
+    holidays: activeHolidays.filter(h => h.date === selectedDate),
     birthdays: BIRTHDAYS.filter(b => b.date === selectedDate.slice(5)),
-    events: TEAM_EVENTS.filter(e => e.date === selectedDate),
+    events: activeEvents.filter(e => e.date === selectedDate),
   } : null;
 
   return (

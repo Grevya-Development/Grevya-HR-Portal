@@ -1,39 +1,148 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../../types';
 import { Send, Bot, X, Minimize2, MessageSquare } from 'lucide-react';
+import { useStore } from '../../services/store';
 
-const MOCK_RESPONSES: Record<string, string> = {
-  default: "I'm your HR AI assistant. I can help with leave planning, performance insights, attendance patterns, and team productivity tips. What would you like to know?",
-  leave: "Based on your attendance pattern and current workload, I recommend taking leave between April 15-20. The team coverage looks good during that period, and you have 12 days remaining.",
-  performance: "Your performance score is trending upward — 91 this month vs 82 three months ago. Key strengths: task completion rate and peer feedback. Area to improve: response time on cross-team requests.",
-  burnout: "I notice you've logged 52+ hours this week. Based on historical patterns, this increases burnout risk by 34%. Consider delegating 2-3 tasks and ensuring 8hrs sleep. Would you like help identifying tasks to delegate?",
-  attendance: "Your attendance rate is 97% — top 10% in the company! You have a 45-day check-in streak. Keep it up to unlock the 'Streak Master' badge at 90 days.",
-  salary: "Your next payslip for March 2024 includes a performance bonus of ₹5,000 based on your Q1 metrics. Total net salary: ₹91,150. It'll be credited by March 31.",
-  team: "Your team's productivity index is 88/100. Highlight: Kiran Patel and Vikram Joshi are performing exceptionally. One flag: Arjun Mehta may need workload review — his metrics dipped 12% this sprint.",
-  hi: "Hello! Great to see you. How can I assist you with HR matters today? You can ask me about leaves, performance, attendance, payslips, or team insights.",
-};
-
-function getResponse(input: string): string {
+function generateLiveResponse(
+  input: string,
+  state: {
+    currentUser: any;
+    leaveBalances: any[];
+    leaveRequests: any[];
+    todayAttendance: any;
+    attendanceRecords: any[];
+    tasks: any[];
+    payrollRecords: any[];
+    employees: any[];
+    departments: any[];
+  }
+): string {
   const lower = input.toLowerCase();
-  if (lower.includes('hi') || lower.includes('hello') || lower.includes('hey')) return MOCK_RESPONSES.hi;
-  if (lower.includes('leave') || lower.includes('vacation') || lower.includes('off')) return MOCK_RESPONSES.leave;
-  if (lower.includes('performance') || lower.includes('score') || lower.includes('review')) return MOCK_RESPONSES.performance;
-  if (lower.includes('burnout') || lower.includes('stress') || lower.includes('overwork')) return MOCK_RESPONSES.burnout;
-  if (lower.includes('attendance') || lower.includes('streak') || lower.includes('check')) return MOCK_RESPONSES.attendance;
-  if (lower.includes('salary') || lower.includes('payslip') || lower.includes('pay')) return MOCK_RESPONSES.salary;
-  if (lower.includes('team') || lower.includes('member') || lower.includes('productivity')) return MOCK_RESPONSES.team;
-  return MOCK_RESPONSES.default;
+  const {
+    currentUser,
+    leaveBalances,
+    leaveRequests,
+    todayAttendance,
+    attendanceRecords,
+    tasks,
+    payrollRecords,
+    employees,
+    departments,
+  } = state;
+
+  const userName = currentUser?.name?.split(' ')[0] || 'there';
+
+  // 1. GREETING
+  if (lower.includes('hi') || lower.includes('hello') || lower.includes('hey')) {
+    return `Hello ${userName}! I'm your Grevya HR assistant. How can I assist you with your leaves, attendance, tasks, payslips, or team today?`;
+  }
+
+  // 2. LEAVE
+  if (lower.includes('leave') || lower.includes('vacation') || lower.includes('off') || lower.includes('holiday')) {
+    const totalRemaining = leaveBalances.reduce((sum, b) => sum + (Number(b.remainingDays) || 0), 0);
+    const breakdown = leaveBalances.length > 0
+      ? leaveBalances.map(b => `${b.leaveTypeName || 'Leave'}: ${b.remainingDays ?? 0}d`).join(', ')
+      : 'standard policy';
+    const pendingCount = leaveRequests.filter(l => l.status === 'pending').length;
+
+    if (leaveBalances.length > 0) {
+      return `You have ${totalRemaining} total days of leave remaining (${breakdown}). You have ${pendingCount} pending leave request(s) awaiting approval. You can apply for leave directly from the Leave Management page.`;
+    }
+    return `You have ${leaveRequests.length} leave record(s) on file and ${pendingCount} pending request(s). Check the Leave tab for complete balance breakdowns.`;
+  }
+
+  // 3. PERFORMANCE & TASKS
+  if (lower.includes('performance') || lower.includes('score') || lower.includes('review') || lower.includes('metric')) {
+    const myTasks = tasks.filter(t => t.assignedTo === currentUser?.id || t.assignedTo === currentUser?.name);
+    const completed = myTasks.filter(t => t.status === 'completed');
+    const rate = myTasks.length > 0 ? Math.round((completed.length / myTasks.length) * 100) : 100;
+
+    return `Performance snapshot for ${currentUser?.name || 'your profile'}: Task completion rate is ${rate}% (${completed.length}/${myTasks.length} assigned tasks finished). Department: ${currentUser?.department || 'Operations'}. Maintain your streak and timely task completion to rank high on the team leaderboard!`;
+  }
+
+  // 4. BURNOUT & WORKLOAD
+  if (lower.includes('burnout') || lower.includes('stress') || lower.includes('overwork') || lower.includes('workload')) {
+    const myTasks = tasks.filter(t => t.assignedTo === currentUser?.id || t.assignedTo === currentUser?.name);
+    const openTasks = myTasks.filter(t => t.status !== 'completed');
+    const urgentTasks = openTasks.filter(t => t.priority === 'urgent' || t.priority === 'high');
+
+    return `Workload pulse check: You currently have ${openTasks.length} open task(s), with ${urgentTasks.length} marked high or urgent priority. Today's attendance status: ${todayAttendance?.status?.replace('_', ' ') || 'not clocked in'}. Make sure to take regular breaks, log your lunch hours, and discuss task prioritization with your manager if feeling overwhelmed.`;
+  }
+
+  // 5. ATTENDANCE
+  if (lower.includes('attendance') || lower.includes('streak') || lower.includes('check') || lower.includes('clock')) {
+    const statusText = todayAttendance?.status ? todayAttendance.status.replace('_', ' ').toUpperCase() : 'NOT CLOCKED IN';
+    const clockInInfo = todayAttendance?.clockInTime
+      ? ` (Clocked in at ${new Date(todayAttendance.clockInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`
+      : '';
+    const myAttendanceCount = attendanceRecords.filter(a => a.employeeId === currentUser?.id).length;
+
+    return `Today's attendance status: ${statusText}${clockInInfo}. You have ${myAttendanceCount} attendance log entries recorded in Grevya. Don't forget that photo verification and GPS location are required for valid clock-ins.`;
+  }
+
+  // 6. SALARY / PAYSLIP
+  if (lower.includes('salary') || lower.includes('payslip') || lower.includes('pay') || lower.includes('bonus')) {
+    const myPayslips = payrollRecords.filter(p => p.employeeId === currentUser?.id);
+    if (myPayslips.length > 0) {
+      const latest = myPayslips[0];
+      return `Your latest recorded payslip is for ${latest.month} ${latest.year}. Net pay: ₹${Number(latest.netSalary || 0).toLocaleString('en-IN')}. Status: Paid. You can view itemized breakdowns and download slips in the Payslips tab.`;
+    }
+    return `Payroll runs are processed on a monthly cycle by HR. Once your monthly attendance is locked, your official payslip will be generated and available under your profile payslips section.`;
+  }
+
+  // 7. TEAM
+  if (lower.includes('team') || lower.includes('member') || lower.includes('productivity') || lower.includes('department')) {
+    const deptEmployees = employees.filter(e => e.department === currentUser?.department);
+    const isLeadership = ['super_admin', 'admin', 'hr_manager', 'manager', 'team_lead'].includes(currentUser?.role || '');
+
+    if (isLeadership) {
+      return `Organization summary: Grevya has ${employees.length} registered employees across ${departments.length} departments. Department '${currentUser?.department || 'Operations'}' has ${deptEmployees.length} members. You can review attendance trends and team tasks from your leadership dashboard.`;
+    }
+    return `Your team: You are part of the '${currentUser?.department || 'Operations'}' department, which has ${deptEmployees.length} registered member(s). You can explore full reporting lines in the Organization Chart.`;
+  }
+
+  // DEFAULT
+  return `I'm your Grevya HR AI assistant for ${currentUser?.name || 'you'}. I can provide live updates on your leave balances, today's attendance status, task progress, team structure, and payslips. What would you like to check?`;
 }
 
 export default function AIChat() {
+  const {
+    currentUser,
+    leaveBalances,
+    leaveRequests,
+    todayAttendance,
+    attendanceRecords,
+    tasks,
+    payrollRecords,
+    employees,
+    departments,
+  } = useStore();
+
   const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: '0', role: 'assistant', content: MOCK_RESPONSES.default, timestamp: new Date().toISOString() },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const getContextState = () => ({
+    currentUser,
+    leaveBalances,
+    leaveRequests,
+    todayAttendance,
+    attendanceRecords,
+    tasks,
+    payrollRecords,
+    employees,
+    departments,
+  });
+
+  useEffect(() => {
+    if (messages.length === 0) {
+      const greeting = generateLiveResponse('', getContextState());
+      setMessages([{ id: '0', role: 'assistant', content: greeting, timestamp: new Date().toISOString() }]);
+    }
+  }, [currentUser?.id]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -43,10 +152,12 @@ export default function AIChat() {
     if (!input.trim()) return;
     const userMsg: ChatMessage = { id: Date.now().toString(), role: 'user', content: input, timestamp: new Date().toISOString() };
     setMessages(m => [...m, userMsg]);
+    const currentInput = input;
     setInput('');
     setTyping(true);
-    await new Promise(r => setTimeout(r, 1200));
-    const reply: ChatMessage = { id: (Date.now() + 1).toString(), role: 'assistant', content: getResponse(input), timestamp: new Date().toISOString() };
+    await new Promise(r => setTimeout(r, 600));
+    const replyContent = generateLiveResponse(currentInput, getContextState());
+    const reply: ChatMessage = { id: (Date.now() + 1).toString(), role: 'assistant', content: replyContent, timestamp: new Date().toISOString() };
     setMessages(m => [...m, reply]);
     setTyping(false);
   };
